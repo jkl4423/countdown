@@ -7,7 +7,7 @@
 <title>Das Böse erwacht</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;900&family=Cinzel+Decorative:wght@700&family=IM+Fell+English:ital@1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;900&family=Cinzel+Decorative:wght@700&family=IM+Fell+English:ital@1&family=Jim+Nightshade&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="data/skull.jpeg">
 <style>
   :root {
@@ -512,6 +512,59 @@
     70%      { opacity: .5; }
   }
 
+  /* ---------- Geisterschrift: Namen zerfallen, Flüstern verweht ---------- */
+
+  .ghosts {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .ghost {
+    position: absolute;
+    white-space: nowrap;
+    letter-spacing: .04em;
+    opacity: 0;
+    filter: blur(8px);
+    transition: opacity 1.8s ease, filter 1.8s ease;
+  }
+  .ghost.in { opacity: 1; filter: blur(0); }
+
+  /* Namen in Fraktur – wie eine Inschrift oder ein Fluch */
+  .ghost.name {
+    font-family: 'UnifrakturMaguntia', serif;
+    font-size: clamp(1.5rem, 5.5vw, 3.3rem);
+    color: rgba(150, 28, 18, .6);
+    text-shadow: 0 0 .4em rgba(110, 0, 0, .6);
+  }
+
+  /* Flüstern in kratziger Handschrift */
+  .ghost.whisper {
+    font-family: 'Jim Nightshade', cursive;
+    font-size: clamp(1.15rem, 3.8vw, 2.3rem);
+    color: rgba(200, 180, 160, .35);
+    text-shadow: 0 0 .5em rgba(0, 0, 0, .9);
+    transition-duration: 2.5s;
+  }
+  .ghost.whisper.out {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(-24px);
+    transition: opacity 2.6s ease, filter 2.6s ease, transform 2.6s ease;
+  }
+
+  .ghost .ch {
+    display: inline-block;
+    transition: transform 1.8s cubic-bezier(.5, 0, .9, .6), opacity 1.8s ease-in, filter 1.8s ease-in;
+  }
+  .ghost .ch.fall {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+    filter: blur(2px);
+  }
+
   @keyframes quake {
     0%, 100% { transform: translate(0, 0) rotate(0); }
     20%      { transform: translate(-3px, 1px) rotate(-.3deg); }
@@ -594,6 +647,7 @@
     body.opening .burst i:nth-child(2),
     body.opening .burst i:nth-child(3) { transform: translate(-50%, -50%) scale(1); transition: none; }
     .unit.tick .num { transform: none; }
+    .ghost .ch.fall, .ghost.whisper.out { transform: none; }
   }
 </style>
 </head>
@@ -614,6 +668,7 @@
   <div class="layer fog"></div>
   <div class="layer fog two"></div>
   <div class="layer count-vignette"></div>
+  <div class="ghosts" id="ghosts" aria-hidden="true"></div>
 
   <main>
     <div class="countdown" role="timer" aria-live="off">
@@ -782,6 +837,7 @@
     count.removeAttribute('aria-hidden');
 
     setTimeout(() => {
+      haunt();
       if (awake) { startAwake(); return; }
       emberMode = 'count'; resize(); initEmbers();
     }, 2600);
@@ -877,6 +933,134 @@
     }, 4000 + Math.random() * 9000);
   }
   scheduleFlicker();
+
+  /* =========================================================
+     Geisterschrift
+     ========================================================= */
+
+  const ghosts = document.getElementById('ghosts');
+
+  // mögliche Stellen (Mitte des Textes, Anteil des Bildschirms);
+  // welche frei ist, wird beim Einblenden geprüft (siehe makeGhost)
+  const GHOST_SLOTS = [
+    { x: .25, y: .07 }, { x: .5,  y: .07 },
+    { x: .2,  y: .16 }, { x: .5,  y: .16 }, { x: .76, y: .2  },
+    { x: .18, y: .3  }, { x: .82, y: .3  },
+    { x: .18, y: .44 }, { x: .82, y: .46 },
+    { x: .3,  y: .58 }, { x: .5,  y: .6  }, { x: .7,  y: .58 },
+    { x: .26, y: .66 }, { x: .76, y: .64 },
+  ];
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
+
+  // Bereiche, die eine Geisterschrift nicht verdecken darf (Bildschirmkoordinaten)
+  function ghostObstacles() {
+    const list = [...ghosts.querySelectorAll('.ghost')].map(g => g.getBoundingClientRect());
+    const info = document.querySelector(document.body.classList.contains('awake') ? '.awakened' : '.countdown');
+    list.push(info.getBoundingClientRect());
+    list.push(document.getElementById('soundToggle').getBoundingClientRect());
+    // Schädel (Stirn bis Kiefer)
+    const p = document.querySelector('.portrait').getBoundingClientRect();
+    list.push({
+      left: p.left + p.width * .36, right: p.left + p.width * .64,
+      top: p.top + p.height * .28, bottom: p.top + p.height * .53,
+    });
+    return list;
+  }
+
+  const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+  function makeGhost(text, cls) {
+    const el = document.createElement('div');
+    el.className = 'ghost ' + cls;
+    for (const c of text) {
+      const span = document.createElement('span');
+      span.className = 'ch';
+      span.textContent = c === ' ' ? ' ' : c;
+      el.appendChild(span);
+    }
+    const obstacles = ghostObstacles(); // vor dem Einfügen, damit el sich nicht selbst im Weg steht
+    ghosts.appendChild(el);
+
+    // Stellen in zufälliger Reihenfolge durchprobieren und die erste freie nehmen;
+    // jeweils an der Stelle zentriert, aber nie über den Rand hinaus
+    const g = ghosts.getBoundingClientRect();
+    const w = el.offsetWidth, h = el.offsetHeight;
+    const gap = 10;
+    let pos = null;
+    for (const slot of shuffle(GHOST_SLOTS)) {
+      const x = Math.min(Math.max(slot.x * g.width - w / 2, 16), g.width - w - 16);
+      const y = Math.min(Math.max(slot.y * g.height - h / 2, 16), g.height - h - 16);
+      const box = { left: g.left + x - gap, right: g.left + x + w + gap, top: g.top + y - gap, bottom: g.top + y + h + gap };
+      if (!pos) pos = { x, y }; // Notlösung, falls nirgends Platz ist
+      if (!obstacles.some(o => overlaps(box, o))) { pos = { x, y }; break; }
+    }
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+
+    el.offsetWidth; // Startzustand übernehmen, damit das Einblenden animiert
+    el.classList.add('in');
+    return el;
+  }
+
+  // Name blendet ein, dann fallen die Buchstaben in zufälliger Reihenfolge weg.
+  // Kehrt zurück, sobald das Zerfallen beginnt (der nächste Name darf schon kommen).
+  async function nameCrumbles(text) {
+    const el = makeGhost(text, 'name');
+    await sleep(1800 + 1400);
+    const chars = shuffle([...el.children]);
+    chars.forEach((ch, i) => {
+      ch.style.setProperty('--dx', rand(-25, 25) + 'px');
+      ch.style.setProperty('--dy', rand(50, 140) + 'px');
+      ch.style.setProperty('--rot', rand(-50, 50) + 'deg');
+      setTimeout(() => ch.classList.add('fall'), i * 180 + rand(0, 120));
+    });
+    setTimeout(() => el.remove(), chars.length * 180 + 2200);
+  }
+
+  // Flüstern blendet ein und verweht nach oben.
+  // Kehrt zurück, sobald es zu verwehen beginnt (das nächste darf schon kommen).
+  async function whisper(text) {
+    const el = makeGhost(text, 'whisper');
+    await sleep(2500 + 3000);
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 2700);
+  }
+
+  // kurz vor Ablauf still sein, damit keine Schrift in den Wechsel zum Finale hineinragt
+  const GHOST_CYCLE = 25000;   // so lange dauert ein Durchgang ungefähr
+  const GHOST_QUIET = 30000;   // vor Ablauf frei halten
+
+  async function waitForQuiet() {
+    let waited = false;
+    while (!awake && TARGET - Date.now() < GHOST_QUIET + GHOST_CYCLE) {
+      waited = true;
+      await sleep(1000);
+    }
+    if (waited) await sleep(6000); // nach dem Wechsel das Finale erst wirken lassen
+  }
+
+  let haunting = false;
+  async function haunt() {
+    if (haunting) return;
+    haunting = true;
+    await sleep(5000);
+    while (true) {
+      await waitForQuiet();
+      await nameCrumbles('Benjamin');
+      await sleep(700);
+      await nameCrumbles('Timea');
+      await sleep(1600);
+      await whisper('… ich sehe euch …');
+      await sleep(1200);
+      // dazu lachen – nach Ablauf läuft das Lachen ohnehin in Schleife
+      if (!awakeStarted) playLaugh();
+      await whisper('… ich warte auf euch …');
+      await sleep(2700 + rand(9000, 17000));
+    }
+  }
 
   /* =========================================================
      Glut / Funken
