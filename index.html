@@ -505,9 +505,17 @@
     .hint { bottom: 10px; }
   }
 
+  /* "Bewegung reduzieren" (iOS/macOS/Android): nur Zoomen und Skalieren weglassen –
+     Glimmen, Nebel und Überblendungen bleiben, sonst wäre die Seite komplett starr */
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition: none !important; }
-    .hint { opacity: .75; }
+    .scene, .figure { animation: none; }
+    body.opening .scene,
+    body.opening .slit { transform: none; }
+    .burst i,
+    body.opening .burst i,
+    body.opening .burst i:nth-child(2),
+    body.opening .burst i:nth-child(3) { transform: translate(-50%, -50%) scale(1); transition: none; }
+    .unit.tick .num { transform: none; }
   }
 </style>
 </head>
@@ -578,8 +586,6 @@
   const LAUGH_VOLUME = 0.9;
   const INTRO_FADE_IN = 4;     // Sekunden beim allerersten Start
   const LOOP_CROSSFADE = 15;   // Sekunden: Ende ausblenden, Anfang einblenden
-
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* =========================================================
      Ton
@@ -688,9 +694,8 @@
     document.body.classList.add('opening');
     count.removeAttribute('aria-hidden');
 
-    const total = reducedMotion ? 0 : 4500;
-    setTimeout(() => { emberMode = 'count'; resize(); initEmbers(); }, reducedMotion ? 0 : 2600);
-    setTimeout(() => { gate.hidden = true; }, total);
+    setTimeout(() => { emberMode = 'count'; resize(); initEmbers(); }, 2600);
+    setTimeout(() => { gate.hidden = true; }, 4500);
   });
 
   /* =========================================================
@@ -707,7 +712,6 @@
   function setField(el, value) {
     if (el.textContent === value) return;
     el.textContent = value;
-    if (reducedMotion) return;
     // neue Ziffer aus dem Dunkel auftauchen lassen
     const unit = el.parentElement;
     unit.classList.add('tick');
@@ -750,7 +754,7 @@
       scheduleFlicker();
     }, 4000 + Math.random() * 9000);
   }
-  if (!reducedMotion) scheduleFlicker();
+  scheduleFlicker();
 
   /* =========================================================
      Glut / Funken
@@ -790,7 +794,7 @@
 
   function initEmbers() {
     const base = emberMode === 'gate' ? 36 : 28;
-    const count = reducedMotion ? 0 : (W < 600 ? Math.round(base / 2) : base);
+    const count = W < 600 ? Math.round(base / 2) : base;
     embers = Array.from({ length: count }, () => spawn(true));
   }
 
@@ -817,7 +821,7 @@
   window.addEventListener('resize', () => { resize(); initEmbers(); });
   resize();
   initEmbers();
-  if (!reducedMotion) draw();
+  draw();
 </script>
 </body>
 </html>
