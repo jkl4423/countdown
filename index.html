@@ -537,7 +537,7 @@
     font-family: 'UnifrakturMaguntia', serif;
     font-size: clamp(1.5rem, 5.5vw, 3.3rem);
     color: rgba(150, 28, 18, .6);
-    text-shadow: 0 0 .4em rgba(110, 0, 0, .6);
+    text-shadow: 0 0 .15em #000, 0 0 .4em rgba(110, 0, 0, .6);
   }
 
   /* Flüstern in kratziger Handschrift */
@@ -942,13 +942,13 @@
 
   // mögliche Stellen (Mitte des Textes, Anteil des Bildschirms);
   // welche frei ist, wird beim Einblenden geprüft (siehe makeGhost)
+  // nur über dem Kopf sowie links und rechts davon – darunter ist der Countdown
   const GHOST_SLOTS = [
-    { x: .25, y: .07 }, { x: .5,  y: .07 },
-    { x: .2,  y: .16 }, { x: .5,  y: .16 }, { x: .76, y: .2  },
-    { x: .18, y: .3  }, { x: .82, y: .3  },
-    { x: .18, y: .44 }, { x: .82, y: .46 },
-    { x: .3,  y: .58 }, { x: .5,  y: .6  }, { x: .7,  y: .58 },
-    { x: .26, y: .66 }, { x: .76, y: .64 },
+    { x: .22, y: .06 }, { x: .5,  y: .06 }, { x: .78, y: .07 },
+    { x: .2,  y: .14 }, { x: .5,  y: .14 }, { x: .8,  y: .15 },
+    { x: .14, y: .26 }, { x: .86, y: .27 },
+    { x: .12, y: .36 }, { x: .88, y: .37 },
+    { x: .14, y: .46 }, { x: .86, y: .45 },
   ];
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -961,11 +961,16 @@
     const info = document.querySelector(document.body.classList.contains('awake') ? '.awakened' : '.countdown');
     list.push(info.getBoundingClientRect());
     list.push(document.getElementById('soundToggle').getBoundingClientRect());
-    // Schädel (Stirn bis Kiefer)
+    // die Figur: Mitra, Kapuze und Schädel …
     const p = document.querySelector('.portrait').getBoundingClientRect();
     list.push({
-      left: p.left + p.width * .36, right: p.left + p.width * .64,
-      top: p.top + p.height * .28, bottom: p.top + p.height * .53,
+      left: p.left + p.width * .27, right: p.left + p.width * .73,
+      top: p.top + p.height * .2, bottom: p.top + p.height * .56,
+    });
+    // … sowie Schultern und Körper darunter (nur innerhalb des Bildes)
+    list.push({
+      left: p.left, right: p.right,
+      top: p.top + p.height * .5, bottom: p.bottom,
     });
     return list;
   }
@@ -994,8 +999,23 @@
       const x = Math.min(Math.max(slot.x * g.width - w / 2, 16), g.width - w - 16);
       const y = Math.min(Math.max(slot.y * g.height - h / 2, 16), g.height - h - 16);
       const box = { left: g.left + x - gap, right: g.left + x + w + gap, top: g.top + y - gap, bottom: g.top + y + h + gap };
-      if (!pos) pos = { x, y }; // Notlösung, falls nirgends Platz ist
       if (!obstacles.some(o => overlaps(box, o))) { pos = { x, y }; break; }
+    }
+    // nirgends Platz (z. B. Handy quer): ganz oben über dem Kopf zeigen –
+    // möglichst nicht auf einem anderen Geistertext, sonst einfach mittig
+    if (!pos) {
+      const others = [...ghosts.querySelectorAll('.ghost')].filter(o => o !== el).map(o => o.getBoundingClientRect());
+      const ys = [8, ...others.map(o => o.bottom - g.top + 4)];                    // ganz oben, sonst direkt unter einem anderen Text
+      const xs = [(g.width - w) / 2, 16, Math.max(16, g.width - w - 16 - 52),      // rechts Platz für den Ton-Knopf
+                  g.width * .25 - w / 2, g.width * .7 - w / 2].map(x => Math.max(16, x));
+      pos = { x: xs[0], y: ys[0] };
+      search:
+      for (const y of ys) {
+        for (const x of xs) {
+          const box = { left: g.left + x - gap, right: g.left + x + w + gap, top: g.top + y, bottom: g.top + y + h + gap };
+          if (!others.some(o => overlaps(box, o))) { pos = { x, y }; break search; }
+        }
+      }
     }
     el.style.left = pos.x + 'px';
     el.style.top = pos.y + 'px';
