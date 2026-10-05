@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Das Böse erwacht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;900&family=Cinzel+Decorative:wght@700&family=IM+Fell+English:ital@1&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="data/skull.jpeg">
+<style>
+  :root {
+    --bg: #000;
+    --gold: #b08f4f;
+    --gold-dim: #7a6033;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    overflow: hidden;
+  }
+
+  .layer { position: fixed; inset: 0; pointer-events: none; }
+  .screen { position: fixed; inset: 0; overflow: hidden; }
+
+  /* =========================================================
+     TOR
+     ========================================================= */
+
+  #gate { z-index: 3; transition: opacity 2s ease 2.4s; }
+  #gate[hidden] { display: none; }
+
+  /* 16:9-Fläche, die den Viewport immer abdeckt;
+     Overlays in % dieser Fläche bleiben so auf dem Tor. */
+  .stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100vw, 177.78vh);
+    height: max(100vh, 56.25vw);
+    transform: translate(-50%, -50%);
+  }
+  /* Handy: sichtbare Höhe ohne Browserleisten */
+  @supports (height: 100dvh) {
+    .stage {
+      width: max(100vw, 177.78dvh);
+      height: max(100dvh, 56.25vw);
+    }
+  }
+
+  .scene {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 52%;
+    animation: slowzoom 70s ease-in-out infinite alternate;
+  }
+
+  .scene img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    filter: brightness(.5) contrast(1.15) saturate(.9);
+    user-select: none;
+  }
+
+  /* glühender Spalt zwischen den Torflügeln */
+  .slit {
+    position: absolute;
+    left: 47%;
+    width: 6%;
+    top: 9%;
+    height: 87%;
+    background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255, 110, 30, .55), rgba(193, 30, 10, .2) 45%, transparent 75%);
+    mix-blend-mode: screen;
+    animation: shimmer 5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .seal-glow {
+    position: absolute;
+    left: 42%;
+    top: 36%;
+    width: 16%;
+    height: 28%;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 120, 40, .45), rgba(160, 20, 5, .15) 40%, transparent 70%);
+    mix-blend-mode: screen;
+    animation: sealpulse 7s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .floor-glow {
+    position: absolute;
+    left: 35%;
+    top: 84%;
+    width: 30%;
+    height: 16%;
+    background: radial-gradient(ellipse 50% 40% at 50% 30%, rgba(255, 90, 20, .3), transparent 70%);
+    mix-blend-mode: screen;
+    animation: shimmer 6s ease-in-out infinite -2s;
+    pointer-events: none;
+  }
+
+  /* klickbarer Bereich = Torflügel */
+  .door {
+    position: absolute;
+    left: 40%;
+    top: 20%;
+    width: 20.5%;
+    height: 75%;
+    border: none;
+    background: none;
+    border-radius: 48% 48% 0 0 / 18% 18% 0 0;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .door::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(ellipse 30% 60% at 50% 50%, rgba(255, 110, 30, .22), transparent 70%);
+    mix-blend-mode: screen;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+  .door:hover::after, .door:focus-visible::after { opacity: 1; }
+
+  /* dunkelroter Nebel, der beim Öffnen aus dem Spalt herausquillt */
+  .burst {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .burst i {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 240vmax;
+    height: 240vmax;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(.01);
+  }
+  .burst i:nth-child(1) {
+    background: radial-gradient(circle,
+      rgba(150, 35, 10, .85) 0%, rgba(95, 12, 5, .85) 12%, rgba(50, 3, 2, .92) 28%, rgba(14, 0, 0, .97) 45%, rgba(0, 0, 0, 0) 68%);
+  }
+  /* unregelmässige Wolkenballen um den Kern */
+  .burst i:nth-child(2) {
+    background:
+      radial-gradient(ellipse 14% 9% at 42% 46%, rgba(130, 25, 8, .55), transparent 70%),
+      radial-gradient(ellipse 10% 14% at 58% 54%, rgba(110, 15, 5, .5), transparent 70%),
+      radial-gradient(ellipse 18% 8% at 50% 60%, rgba(90, 10, 4, .45), transparent 70%),
+      radial-gradient(ellipse 9% 12% at 46% 38%, rgba(100, 14, 5, .4), transparent 70%);
+  }
+  .burst i:nth-child(3) {
+    background:
+      radial-gradient(ellipse 12% 16% at 36% 55%, rgba(80, 8, 3, .5), transparent 70%),
+      radial-gradient(ellipse 16% 10% at 64% 42%, rgba(90, 10, 4, .45), transparent 70%),
+      radial-gradient(ellipse 10% 10% at 55% 66%, rgba(120, 22, 8, .35), transparent 70%);
+  }
+
+  /* treibende Rauchschwaden über dem Rot */
+  .burst-fog {
+    width: 200%;
+    background:
+      radial-gradient(ellipse 18% 22% at 15% 40%, rgba(60, 10, 8, .55), transparent 70%),
+      radial-gradient(ellipse 22% 16% at 38% 70%, rgba(20, 2, 2, .6), transparent 70%),
+      radial-gradient(ellipse 16% 20% at 62% 30%, rgba(70, 12, 8, .5), transparent 70%),
+      radial-gradient(ellipse 24% 18% at 85% 65%, rgba(20, 2, 2, .6), transparent 70%);
+    filter: blur(40px);
+    opacity: 0;
+    animation: drift 40s linear infinite;
+  }
+
+  .gate-fog { width: 200%; }
+
+  .gate-vignette {
+    background: radial-gradient(ellipse 70% 75% at 50% 52%, transparent 30%, rgba(0, 0, 0, .75) 70%, #000 100%);
+  }
+
+  .hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: clamp(16px, 4vh, 40px);
+    padding: 0 16px;
+    text-align: center;
+    font-family: 'IM Fell English', serif;
+    font-style: italic;
+    font-size: clamp(1rem, 2.6vw, 1.4rem);
+    letter-spacing: .05em;
+    color: var(--gold-dim);
+    text-shadow: 0 2px 8px #000;
+    opacity: 0;
+    animation: hintin 4s 2s forwards, breathe-text 6s 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* ---------- Öffnen ---------- */
+
+  body.opening .scene {
+    animation: none;
+    transform: scale(1.6);
+    transition: transform 3.2s cubic-bezier(.55, 0, .45, 1);
+  }
+  body.opening .slit {
+    animation: none;
+    opacity: 1;
+    transform: scaleX(6);
+    filter: brightness(1.4);
+    transition: transform 1.6s ease-in, filter 1s ease;
+  }
+  body.opening .seal-glow,
+  body.opening .floor-glow {
+    animation: none;
+    opacity: 1;
+    filter: brightness(1.5);
+    transition: filter 1s ease;
+  }
+  body.opening .burst { opacity: 1; transition: opacity 1.2s ease .4s; }
+  body.opening .burst i {
+    transform: translate(-50%, -50%) scale(1);
+    transition: transform 3.2s cubic-bezier(.55, 0, .7, .6) .4s;
+  }
+  body.opening .burst i:nth-child(2) {
+    transform: translate(-50%, -50%) scale(1.1) rotate(25deg);
+    transition: transform 3.6s cubic-bezier(.5, 0, .7, .6) .6s;
+  }
+  body.opening .burst i:nth-child(3) {
+    transform: translate(-50%, -50%) scale(1.2) rotate(-20deg);
+    transition: transform 4s cubic-bezier(.5, 0, .7, .6) .8s;
+  }
+  body.opening .burst-fog { opacity: 1; transition: opacity 2s ease 1.2s; }
+  body.opening .hint { animation: none; opacity: 0; transition: opacity .6s; }
+  body.opening #gate { opacity: 0; pointer-events: none; }
+
+  /* =========================================================
+     COUNTDOWN
+     ========================================================= */
+
+  #count { z-index: 1; opacity: 0; transition: opacity 2.6s ease 2.2s; }
+  body.opening #count { opacity: 1; }
+
+  /* Hochformat 9:16, volle Höhe, mittig; Ränder schwarz */
+  .portrait {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    height: 100vh;
+    height: 100dvh;
+    aspect-ratio: 9 / 16;
+    transform: translate(-50%, -50%);
+  }
+
+  .figure {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 40%;
+    animation: breathe 14s ease-in-out infinite;
+  }
+
+  .figure img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    filter: brightness(.6) contrast(1.1);
+    user-select: none;
+  }
+
+  .circle-glow {
+    position: absolute;
+    left: 5%;
+    top: 12%;
+    width: 90%;
+    height: 44%;
+    background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(170, 25, 10, .35), transparent 70%);
+    mix-blend-mode: screen;
+    animation: shimmer 9s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .eye {
+    position: absolute;
+    top: 38.8%;
+    width: 7%;
+    height: 3.5%;
+    background: radial-gradient(circle, rgba(255, 60, 30, .9), rgba(200, 20, 10, .35) 35%, transparent 70%);
+    mix-blend-mode: screen;
+    animation: eyes 5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .eye.l { left: 41.2%; }
+  .eye.r { left: 52.8%; }
+
+  .edges {
+    position: absolute;
+    inset: -1px;
+    background:
+      linear-gradient(90deg, #000 0%, transparent 18%, transparent 82%, #000 100%),
+      linear-gradient(180deg, #000 0%, transparent 10%, transparent 70%, #000 100%);
+    pointer-events: none;
+  }
+
+  .count-vignette {
+    background: radial-gradient(ellipse 75% 80% at 50% 45%, transparent 40%, rgba(0, 0, 0, .7) 80%, #000 100%);
+  }
+
+  main {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    text-align: center;
+    padding: 16px 16px clamp(24px, 7vh, 64px);
+  }
+
+  .countdown {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(.5rem, 2vw, 1.25rem);
+    width: min(100%, 720px);
+  }
+
+  .unit {
+    position: relative;
+    padding: clamp(.7rem, 1.8vw, 1.1rem) .3rem;
+    background: rgba(0, 0, 0, .6);
+    border: 1px solid rgba(140, 111, 58, .18);
+    box-shadow: inset 0 0 25px rgba(90, 0, 0, .35), 0 0 24px rgba(0, 0, 0, .9);
+  }
+
+  /* ---------- Ziffern: dunkel wie getrocknetes Blut, glimmen im Takt der Augen ---------- */
+
+  .num {
+    position: relative;
+    display: block;
+    font-weight: 900;
+    font-size: clamp(2rem, 7vw, 4.5rem);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: #6a1c13;
+    text-shadow: 0 0 .18em rgba(120, 10, 5, .45), 0 2px 0 #000;
+    animation: smoulder 5s ease-in-out infinite;   /* gleicher Rhythmus wie .eye */
+    transition: opacity .8s ease-out, filter .8s ease-out, transform .8s ease-out;
+  }
+
+  /* neue Ziffer taucht aus dem Dunkel auf */
+  .unit.tick .num {
+    opacity: .08;
+    filter: blur(4px);
+    transform: scale(1.06);
+    transition: none;
+  }
+
+  /* gelegentliches Aussetzen, wie eine sterbende Glut */
+  .unit.flicker .num {
+    opacity: .15;
+    transition: none;
+  }
+
+  .label {
+    position: relative;
+    display: block;
+    margin-top: .5rem;
+    font-size: clamp(.6rem, 1.5vw, .8rem);
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+  }
+
+  .awakened {
+    display: none;
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.8rem, 6vw, 3.5rem);
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(255, 90, 20, .6), 0 0 50px rgba(160, 15, 10, .8);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  body.awake .countdown { display: none; }
+  body.awake .awakened { display: block; }
+
+  /* =========================================================
+     Gemeinsam
+     ========================================================= */
+
+  .fog {
+    width: 200%;
+    background:
+      radial-gradient(ellipse 22% 18% at 12% 82%, rgba(110, 95, 95, .13), transparent 70%),
+      radial-gradient(ellipse 18% 14% at 38% 94%, rgba(80, 55, 55, .15), transparent 70%),
+      radial-gradient(ellipse 26% 16% at 62% 80%, rgba(110, 95, 95, .11), transparent 70%),
+      radial-gradient(ellipse 20% 15% at 88% 92%, rgba(80, 55, 55, .15), transparent 70%);
+    filter: blur(26px);
+    animation: drift 75s linear infinite;
+  }
+  .fog.two {
+    top: -20%;
+    opacity: .65;
+    animation-duration: 115s;
+    animation-direction: reverse;
+  }
+
+  #embers { position: fixed; inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
+
+  .sound-toggle {
+    position: fixed;
+    right: 16px;
+    top: 16px;
+    z-index: 5;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid rgba(140, 111, 58, .3);
+    background: rgba(0, 0, 0, .6);
+    color: var(--gold-dim);
+    cursor: pointer;
+    opacity: .5;
+    transition: opacity .3s;
+  }
+  .sound-toggle:hover, .sound-toggle:focus-visible { opacity: 1; outline: none; }
+  .sound-toggle .off { display: none; }
+  .sound-toggle.muted .on { display: none; }
+  .sound-toggle.muted .off { display: block; }
+
+  .blackout {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    background: #000;
+    pointer-events: none;
+    opacity: 0;
+    animation: fadeout 3s ease;
+  }
+
+  /* ---------- Animationen ---------- */
+
+  @keyframes slowzoom { from { transform: scale(1); } to { transform: scale(1.07); } }
+  @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+  @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes fadeout { from { opacity: 1; } }
+  @keyframes hintin { to { opacity: .75; } }
+  @keyframes breathe-text { 0%, 100% { opacity: .75; } 50% { opacity: .35; } }
+  @keyframes pulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+
+  @keyframes shimmer {
+    0%, 100% { opacity: .55; }
+    18% { opacity: .8; }
+    20% { opacity: .45; }
+    23% { opacity: .75; }
+    50% { opacity: 1; }
+    74% { opacity: .6; }
+    76% { opacity: .85; }
+  }
+
+  @keyframes sealpulse { 0%, 100% { opacity: .35; } 50% { opacity: .9; } }
+
+  @keyframes eyes {
+    0%, 100% { opacity: .35; }
+    40%      { opacity: .9; }
+    46%      { opacity: .2; }
+    50%      { opacity: .8; }
+    70%      { opacity: .5; }
+  }
+
+  /* gleiche Schritte wie @keyframes eyes */
+  @keyframes smoulder {
+    0%, 100% { color: #5c1810; text-shadow: 0 0 .15em rgba(110, 8, 4, .35), 0 2px 0 #000; }
+    40%      { color: #8a2618; text-shadow: 0 0 .3em rgba(170, 20, 8, .6), 0 2px 0 #000; }
+    46%      { color: #3e0f0a; text-shadow: 0 0 .1em rgba(90, 5, 3, .25), 0 2px 0 #000; }
+    50%      { color: #7a2014; text-shadow: 0 0 .26em rgba(150, 15, 6, .55), 0 2px 0 #000; }
+    70%      { color: #641a12; text-shadow: 0 0 .2em rgba(120, 10, 5, .45), 0 2px 0 #000; }
+  }
+
+  /* Handy hochkant: 2×2 */
+  @media (max-width: 520px) {
+    .countdown { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; width: min(100%, 300px); }
+    .num { font-size: clamp(2rem, 11vw, 2.8rem); }
+    main { padding-bottom: max(28px, 5vh); }
+  }
+
+  /* Handy quer: wenig Höhe -> kompakte Zahlen, Bild bleibt frei */
+  @media (max-height: 520px) and (orientation: landscape) {
+    .countdown { width: min(100%, 520px); gap: .6rem; }
+    .unit { padding: .4rem .2rem; }
+    .num { font-size: clamp(1.4rem, 9vh, 2.4rem); }
+    .label { margin-top: .3rem; font-size: .55rem; letter-spacing: .2em; }
+    main { padding-bottom: 14px; }
+    .hint { bottom: 10px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .hint { opacity: .75; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ======== Countdown (liegt unter dem Tor) ======== -->
+<section class="screen" id="count" aria-hidden="true">
+  <div class="portrait">
+    <div class="figure">
+      <img src="data/skull.jpeg" alt="" draggable="false">
+      <div class="circle-glow"></div>
+      <div class="eye l"></div>
+      <div class="eye r"></div>
+    </div>
+    <div class="edges"></div>
+  </div>
+
+  <div class="layer fog"></div>
+  <div class="layer fog two"></div>
+  <div class="layer count-vignette"></div>
+
+  <main>
+    <div class="countdown" role="timer" aria-live="off">
+      <div class="unit"><span class="num" id="d">--</span><span class="label">Tage</span></div>
+      <div class="unit"><span class="num" id="h">--</span><span class="label">Stunden</span></div>
+      <div class="unit"><span class="num" id="m">--</span><span class="label">Minuten</span></div>
+      <div class="unit"><span class="num" id="s">--</span><span class="label">Sekunden</span></div>
+    </div>
+    <p class="awakened">Das Tor ist offen.</p>
+  </main>
+</section>
+
+<!-- ======== Das Tor ======== -->
+<section class="screen" id="gate">
+  <div class="stage">
+    <div class="scene">
+      <img src="data/gate.jpeg" alt="" draggable="false">
+      <div class="floor-glow"></div>
+      <div class="slit"></div>
+      <div class="seal-glow"></div>
+      <button class="door" id="door" aria-label="Tor öffnen"></button>
+    </div>
+  </div>
+
+  <div class="layer fog"></div>
+  <div class="layer fog two"></div>
+  <div class="layer gate-vignette"></div>
+  <div class="burst"><i></i><i></i><i></i></div>
+  <div class="layer burst-fog"></div>
+
+  <p class="hint">Tritt ein, Wanderer …</p>
+</section>
+
+<canvas id="embers"></canvas>
+
+<button class="sound-toggle" id="soundToggle" aria-label="Ton an/aus">
+  <svg class="on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+  <svg class="off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6"/><path d="m17 9 6 6"/></svg>
+</button>
+
+<div class="blackout"></div>
+
+<script>
+  // 16.10.2026 10:00 Schweizer Zeit (Sommerzeit MESZ, UTC+2)
+  const TARGET = new Date('2026-10-16T10:00:00+02:00').getTime();
+
+  const INTRO_VOLUME = 0.5;
+  const LAUGH_VOLUME = 0.9;
+  const INTRO_FADE_IN = 4;     // Sekunden beim allerersten Start
+  const LOOP_CROSSFADE = 15;   // Sekunden: Ende ausblenden, Anfang einblenden
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* =========================================================
+     Ton
+     ========================================================= */
+
+  // zwei Instanzen des Intros, damit Ende und Anfang überblendet werden können
+  const intro = [new Audio('data/intro.mp3'), new Audio('data/intro.mp3')];
+  const laugh = new Audio('data/laugh.mp3');
+  [...intro, laugh].forEach(a => { a.preload = 'auto'; });
+
+  let current = 0;
+  let introStarted = false;
+  let crossfading = false;
+  let muted = false;
+
+  function fade(audio, to, seconds, done) {
+    clearInterval(audio._fade);
+    const from = audio.volume;
+    const start = performance.now();
+    audio._fade = setInterval(() => {
+      const p = Math.min((performance.now() - start) / (seconds * 1000), 1);
+      audio.volume = Math.min(Math.max(from + (to - from) * p, 0), 1);
+      if (p === 1) {
+        clearInterval(audio._fade);
+        if (done) done();
+      }
+    }, 50);
+  }
+
+  function startIntro() {
+    if (introStarted) return;
+    introStarted = true;
+    const a = intro[current];
+    a.volume = 0;
+    a.play()
+      .then(() => fade(a, INTRO_VOLUME, INTRO_FADE_IN))
+      .catch(() => { introStarted = false; }); // Autoplay blockiert -> bei erster Interaktion erneut
+  }
+
+  // Loop mit Überblendung: kurz vor Schluss den Anfang parallel einblenden
+  setInterval(() => {
+    const a = intro[current];
+    if (!introStarted || crossfading || !a.duration || a.paused) return;
+    const len = Math.min(LOOP_CROSSFADE, a.duration / 3);
+    if (a.currentTime < a.duration - len) return;
+
+    crossfading = true;
+    const b = intro[1 - current];
+    b.currentTime = 0;
+    b.volume = 0;
+    b.play().catch(() => {});
+    fade(b, INTRO_VOLUME, len);
+    fade(a, 0, len, () => { a.pause(); crossfading = false; });
+    current = 1 - current;
+  }, 250);
+
+  // iOS: jedes Audio-Element muss einmal innerhalb einer Berührung gestartet werden,
+  // sonst darf es später (Loop-Überblendung) nicht mehr spielen
+  let unlocked = false;
+  function unlockSpare() {
+    if (unlocked) return;
+    unlocked = true;
+    const spare = intro[1 - current];
+    spare.muted = true;
+    spare.play()
+      .then(() => { spare.pause(); spare.currentTime = 0; spare.muted = muted; })
+      .catch(() => { spare.muted = muted; unlocked = false; });
+  }
+
+  // Browser erlauben Ton meist erst nach einer Interaktion
+  startIntro();
+  ['pointerdown', 'keydown', 'touchend'].forEach(type =>
+    document.addEventListener(type, (e) => {
+      unlockSpare();
+      if (e.target.closest && e.target.closest('#soundToggle')) return;
+      startIntro();
+    }, { passive: true })
+  );
+
+  const toggle = document.getElementById('soundToggle');
+  toggle.addEventListener('click', () => {
+    muted = !muted;
+    [...intro, laugh].forEach(a => { a.muted = muted; });
+    toggle.classList.toggle('muted', muted);
+    startIntro();
+  });
+
+  /* =========================================================
+     Tor öffnen
+     ========================================================= */
+
+  const gate = document.getElementById('gate');
+  const count = document.getElementById('count');
+  const door = document.getElementById('door');
+  let opened = false;
+
+  door.addEventListener('click', () => {
+    if (opened) return;
+    opened = true;
+
+    startIntro();
+    laugh.currentTime = 0;
+    laugh.volume = LAUGH_VOLUME;
+    laugh.play().catch(() => {});
+
+    document.body.classList.add('opening');
+    count.removeAttribute('aria-hidden');
+
+    const total = reducedMotion ? 0 : 4500;
+    setTimeout(() => { emberMode = 'count'; resize(); initEmbers(); }, reducedMotion ? 0 : 2600);
+    setTimeout(() => { gate.hidden = true; }, total);
+  });
+
+  /* =========================================================
+     Countdown
+     ========================================================= */
+
+  const fields = {
+    d: document.getElementById('d'),
+    h: document.getElementById('h'),
+    m: document.getElementById('m'),
+    s: document.getElementById('s'),
+  };
+
+  function setField(el, value) {
+    if (el.textContent === value) return;
+    el.textContent = value;
+    if (reducedMotion) return;
+    // neue Ziffer aus dem Dunkel auftauchen lassen
+    const unit = el.parentElement;
+    unit.classList.add('tick');
+    requestAnimationFrame(() => requestAnimationFrame(() => unit.classList.remove('tick')));
+  }
+
+  function update() {
+    const diff = TARGET - Date.now();
+    if (diff <= 0) {
+      document.body.classList.add('awake');
+      clearInterval(timer);
+      return;
+    }
+    const sec = Math.floor(diff / 1000);
+    setField(fields.d, String(Math.floor(sec / 86400)).padStart(2, '0'));
+    setField(fields.h, String(Math.floor(sec / 3600) % 24).padStart(2, '0'));
+    setField(fields.m, String(Math.floor(sec / 60) % 60).padStart(2, '0'));
+    setField(fields.s, String(sec % 60).padStart(2, '0'));
+  }
+
+  const timer = setInterval(update, 250);
+  update();
+
+  /* ---------- Ziffern: zufälliges Aussetzen ---------- */
+
+  const units = [...document.querySelectorAll('.unit')];
+
+  function scheduleFlicker() {
+    setTimeout(() => {
+      const unit = units[Math.floor(Math.random() * units.length)];
+      unit.classList.add('flicker');
+      setTimeout(() => unit.classList.remove('flicker'), 70 + Math.random() * 180);
+      // manchmal ein zweites, kurzes Zucken
+      if (Math.random() < .35) {
+        setTimeout(() => {
+          unit.classList.add('flicker');
+          setTimeout(() => unit.classList.remove('flicker'), 60);
+        }, 320);
+      }
+      scheduleFlicker();
+    }, 4000 + Math.random() * 9000);
+  }
+  if (!reducedMotion) scheduleFlicker();
+
+  /* =========================================================
+     Glut / Funken
+     ========================================================= */
+
+  const canvas = document.getElementById('embers');
+  const ctx = canvas.getContext('2d');
+  let W, H, embers = [];
+  let emberMode = 'gate';
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function spawn(initial) {
+    const e = {
+      x: Math.random() * W,
+      y: initial ? Math.random() * H : H + 10,
+      vx: (Math.random() - .5) * .3,
+      vy: -(.2 + Math.random() * .7),
+      r: .5 + Math.random() * 1.4,
+      life: 0,
+      maxLife: 300 + Math.random() * 500,
+      wobble: Math.random() * Math.PI * 2,
+    };
+    if (emberMode === 'gate') {
+      // vor allem vor dem Tor
+      e.x = W / 2 + (Math.random() - .5) * Math.min(W, 900);
+    }
+    return e;
+  }
+
+  function initEmbers() {
+    const base = emberMode === 'gate' ? 36 : 28;
+    const count = reducedMotion ? 0 : (W < 600 ? Math.round(base / 2) : base);
+    embers = Array.from({ length: count }, () => spawn(true));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < embers.length; i++) {
+      const e = embers[i];
+      e.life++;
+      e.wobble += .03;
+      e.x += e.vx + Math.sin(e.wobble) * .25;
+      e.y += e.vy;
+      const fade = Math.sin(Math.min(e.life / e.maxLife, 1) * Math.PI);
+      if (e.life > e.maxLife || e.y < -10) { embers[i] = spawn(false); continue; }
+
+      ctx.fillStyle = `rgba(255, 75, 20, ${.08 * fade})`;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(255, 165, 85, ${.6 * fade})`;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); initEmbers(); });
+  resize();
+  initEmbers();
+  if (!reducedMotion) draw();
+</script>
+</body>
+</html>
