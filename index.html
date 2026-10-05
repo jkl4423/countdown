@@ -70,6 +70,27 @@
     user-select: none;
   }
 
+  /* hellere Kopie des Bildes, nur im Bereich der Tür sichtbar */
+  .scene img.door-lit {
+    filter: brightness(.95) contrast(1.1) saturate(.95);
+    -webkit-mask-image: radial-gradient(ellipse 15% 46% at 50.3% 57%, #000 45%, transparent 100%);
+    mask-image: radial-gradient(ellipse 15% 46% at 50.3% 57%, #000 45%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* schwacher warmer Widerschein des Spalts auf den Torflügeln */
+  .door-wash {
+    position: absolute;
+    left: 38%;
+    top: 16%;
+    width: 24.5%;
+    height: 82%;
+    background: radial-gradient(ellipse 50% 50% at 50% 55%, rgba(255, 100, 30, .14), transparent 75%);
+    mix-blend-mode: screen;
+    animation: shimmer 8s ease-in-out infinite -3s;
+    pointer-events: none;
+  }
+
   /* glühender Spalt zwischen den Torflügeln */
   .slit {
     position: absolute;
@@ -185,7 +206,7 @@
   .gate-fog { width: 200%; }
 
   .gate-vignette {
-    background: radial-gradient(ellipse 70% 75% at 50% 52%, transparent 30%, rgba(0, 0, 0, .75) 70%, #000 100%);
+    background: radial-gradient(ellipse 70% 80% at 50% 55%, transparent 42%, rgba(0, 0, 0, .7) 75%, #000 100%);
   }
 
   .hint {
@@ -208,9 +229,10 @@
 
   /* ---------- Öffnen ---------- */
 
-  body.opening .scene {
-    animation: none;
-    transform: scale(1.6);
+  /* Hineinzoomen auf .stage, damit der langsame Ruhe-Zoom von .scene
+     weiterlaufen kann – sonst springt das Bild beim Klick kurz zurück */
+  body.opening .stage {
+    transform: translate(-50%, -50%) scale(1.6);
     transition: transform 3.2s cubic-bezier(.55, 0, .45, 1);
   }
   body.opening .slit {
@@ -382,17 +404,28 @@
     color: var(--gold-dim);
   }
 
+  /* ---------- Countdown abgelaufen ---------- */
+
   .awakened {
     display: none;
     font-family: 'Cinzel Decorative', serif;
-    font-size: clamp(1.8rem, 6vw, 3.5rem);
-    color: var(--gold);
-    text-shadow: 0 0 20px rgba(255, 90, 20, .6), 0 0 50px rgba(160, 15, 10, .8);
-    animation: pulse 3s ease-in-out infinite;
+    font-size: clamp(1.6rem, 6vw, 3.4rem);
+    line-height: 1.2;
+    letter-spacing: .03em;
+    text-wrap: balance;
+    color: #8a2618;
+    text-shadow: 0 0 .3em rgba(170, 20, 8, .7), 0 2px 0 #000;
+    animation: awakeflicker 2.2s infinite;
   }
 
   body.awake .countdown { display: none; }
   body.awake .awakened { display: block; }
+
+  /* Kopf vibriert, Bild und Augen flackern heftig */
+  body.awake .figure { animation: quake .32s linear infinite; }
+  body.awake .figure img { animation: imgflicker 1.7s infinite; }
+  body.awake .eye { animation: eyes-awake .7s infinite; }
+  body.awake .circle-glow { animation: shimmer 1.2s infinite; filter: brightness(1.8); }
 
   /* =========================================================
      Gemeinsam
@@ -479,6 +512,51 @@
     70%      { opacity: .5; }
   }
 
+  @keyframes quake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    20%      { transform: translate(-3px, 1px) rotate(-.3deg); }
+    40%      { transform: translate(2px, -2px) rotate(.25deg); }
+    60%      { transform: translate(-2px, -1px) rotate(-.2deg); }
+    80%      { transform: translate(3px, 2px) rotate(.3deg); }
+  }
+
+  @keyframes imgflicker {
+    0%, 100% { filter: brightness(.6) contrast(1.1); }
+    8%       { filter: brightness(.3) contrast(1.1); }
+    10%      { filter: brightness(.75) contrast(1.1); }
+    12%      { filter: brightness(.4) contrast(1.1); }
+    30%      { filter: brightness(.65) contrast(1.1); }
+    52%      { filter: brightness(.25) contrast(1.1); }
+    54%      { filter: brightness(.8) contrast(1.1); }
+    56%      { filter: brightness(.55) contrast(1.1); }
+    78%      { filter: brightness(.7) contrast(1.1); }
+    80%      { filter: brightness(.35) contrast(1.1); }
+    82%      { filter: brightness(.6) contrast(1.1); }
+  }
+
+  @keyframes eyes-awake {
+    0%, 100% { opacity: .5; }
+    20%      { opacity: 1; }
+    30%      { opacity: .1; }
+    45%      { opacity: 1; }
+    60%      { opacity: .3; }
+    80%      { opacity: 1; }
+  }
+
+  @keyframes awakeflicker {
+    0%, 100% { opacity: 1; }
+    5%       { opacity: .2; }
+    7%       { opacity: 1; }
+    30%      { opacity: .9; }
+    32%      { opacity: .1; }
+    33%      { opacity: .9; }
+    34%      { opacity: .3; }
+    36%      { opacity: 1; }
+    70%      { opacity: .85; }
+    72%      { opacity: .15; }
+    74%      { opacity: 1; }
+  }
+
   /* gleiche Schritte wie @keyframes eyes */
   @keyframes smoulder {
     0%, 100% { color: #5c1810; text-shadow: 0 0 .15em rgba(110, 8, 4, .35), 0 2px 0 #000; }
@@ -508,8 +586,8 @@
   /* "Bewegung reduzieren" (iOS/macOS/Android): nur Zoomen und Skalieren weglassen –
      Glimmen, Nebel und Überblendungen bleiben, sonst wäre die Seite komplett starr */
   @media (prefers-reduced-motion: reduce) {
-    .scene, .figure { animation: none; }
-    body.opening .scene,
+    .scene, .figure, body.awake .figure { animation: none; }
+    body.opening .stage { transform: translate(-50%, -50%); }
     body.opening .slit { transform: none; }
     .burst i,
     body.opening .burst i,
@@ -544,7 +622,7 @@
       <div class="unit"><span class="num" id="m">--</span><span class="label">Minuten</span></div>
       <div class="unit"><span class="num" id="s">--</span><span class="label">Sekunden</span></div>
     </div>
-    <p class="awakened">Das Tor ist offen.</p>
+    <p class="awakened">Diablo wandelt auf Erden!</p>
   </main>
 </section>
 
@@ -553,6 +631,8 @@
   <div class="stage">
     <div class="scene">
       <img src="data/gate.jpeg" alt="" draggable="false">
+      <img class="door-lit" src="data/gate.jpeg" alt="" draggable="false">
+      <div class="door-wash"></div>
       <div class="floor-glow"></div>
       <div class="slit"></div>
       <div class="seal-glow"></div>
@@ -579,11 +659,14 @@
 <div class="blackout"></div>
 
 <script>
-  // 16.10.2026 10:00 Schweizer Zeit (Sommerzeit MESZ, UTC+2)
-  const TARGET = new Date('2026-10-16T10:00:00+02:00').getTime();
+  // Mi, 14.10.2026 19:00 Schweizer Zeit (Sommerzeit MESZ, UTC+2)
+  // Vorschau des Endzustands: Seite mit ?vorschau aufrufen -> Countdown läuft 10 s nach dem Laden ab
+  const PREVIEW = new URLSearchParams(location.search).has('vorschau');
+  const TARGET = PREVIEW ? Date.now() + 10000 : new Date('2026-10-14T19:00:00+02:00').getTime();
 
   const INTRO_VOLUME = 0.5;
   const LAUGH_VOLUME = 0.9;
+  const LAUGH_INTERVAL = 6;    // Sekunden zwischen den Lachern nach Ablauf (laugh.mp3 ist ~9 s lang -> überlappt)
   const INTRO_FADE_IN = 4;     // Sekunden beim allerersten Start
   const LOOP_CROSSFADE = 15;   // Sekunden: Ende ausblenden, Anfang einblenden
 
@@ -593,8 +676,10 @@
 
   // zwei Instanzen des Intros, damit Ende und Anfang überblendet werden können
   const intro = [new Audio('data/intro.mp3'), new Audio('data/intro.mp3')];
-  const laugh = new Audio('data/laugh.mp3');
-  [...intro, laugh].forEach(a => { a.preload = 'auto'; });
+  // zwei Instanzen des Lachens, damit sie sich nach Ablauf überlappen können
+  const laughs = [new Audio('data/laugh.mp3'), new Audio('data/laugh.mp3')];
+  const allAudio = [...intro, ...laughs];
+  allAudio.forEach(a => { a.preload = 'auto'; });
 
   let current = 0;
   let introStarted = false;
@@ -643,16 +728,19 @@
   }, 250);
 
   // iOS: jedes Audio-Element muss einmal innerhalb einer Berührung gestartet werden,
-  // sonst darf es später (Loop-Überblendung) nicht mehr spielen
+  // sonst darf es später (Loop-Überblendung, Lach-Schleife) nicht mehr spielen
+  function unlock(a) {
+    a.muted = true;
+    return a.play()
+      .then(() => { a.pause(); a.currentTime = 0; a.muted = muted; })
+      .catch((err) => { a.muted = muted; throw err; });
+  }
+
   let unlocked = false;
   function unlockSpare() {
     if (unlocked) return;
     unlocked = true;
-    const spare = intro[1 - current];
-    spare.muted = true;
-    spare.play()
-      .then(() => { spare.pause(); spare.currentTime = 0; spare.muted = muted; })
-      .catch(() => { spare.muted = muted; unlocked = false; });
+    unlock(intro[1 - current]).catch(() => { unlocked = false; });
   }
 
   // Browser erlauben Ton meist erst nach einer Interaktion
@@ -668,7 +756,7 @@
   const toggle = document.getElementById('soundToggle');
   toggle.addEventListener('click', () => {
     muted = !muted;
-    [...intro, laugh].forEach(a => { a.muted = muted; });
+    allAudio.forEach(a => { a.muted = muted; });
     toggle.classList.toggle('muted', muted);
     startIntro();
   });
@@ -687,16 +775,48 @@
     opened = true;
 
     startIntro();
-    laugh.currentTime = 0;
-    laugh.volume = LAUGH_VOLUME;
-    laugh.play().catch(() => {});
+    playLaugh();
+    unlock(laughs[laughIndex]).catch(() => {}); // die andere Instanz für die spätere Schleife
 
     document.body.classList.add('opening');
     count.removeAttribute('aria-hidden');
 
-    setTimeout(() => { emberMode = 'count'; resize(); initEmbers(); }, 2600);
+    setTimeout(() => {
+      if (awake) { startAwake(); return; }
+      emberMode = 'count'; resize(); initEmbers();
+    }, 2600);
     setTimeout(() => { gate.hidden = true; }, 4500);
   });
+
+  /* =========================================================
+     Countdown abgelaufen: Funkenregen + Lachen in Schleife
+     ========================================================= */
+
+  let awake = false;
+  let awakeStarted = false;
+
+  let laughIndex = 0;
+
+  // abwechselnd beide Instanzen, damit ein noch laufendes Lachen nicht abgeschnitten wird
+  function playLaugh() {
+    const a = laughs[laughIndex];
+    laughIndex = 1 - laughIndex;
+    a.currentTime = 0;
+    a.volume = LAUGH_VOLUME;
+    a.play().catch(() => {});
+  }
+
+  // erst, wenn das Tor geöffnet ist (vorher wäre Ton ohnehin blockiert)
+  function startAwake() {
+    if (awakeStarted) return;
+    awakeStarted = true;
+    emberMode = 'rain';
+    resize();
+    initEmbers();
+    // läuft noch das Lachen vom Tor-Klick, nicht sofort ein zweites starten
+    if (laughs.every(a => a.paused)) playLaugh();
+    setInterval(playLaugh, LAUGH_INTERVAL * 1000);
+  }
 
   /* =========================================================
      Countdown
@@ -721,8 +841,10 @@
   function update() {
     const diff = TARGET - Date.now();
     if (diff <= 0) {
+      awake = true;
       document.body.classList.add('awake');
       clearInterval(timer);
+      if (opened) startAwake();
       return;
     }
     const sec = Math.floor(diff / 1000);
@@ -788,12 +910,21 @@
     if (emberMode === 'gate') {
       // vor allem vor dem Tor
       e.x = W / 2 + (Math.random() - .5) * Math.min(W, 900);
+    } else if (emberMode === 'rain') {
+      // Funken regnen von oben herab
+      e.y = initial ? Math.random() * H : -5;
+      e.vx = (Math.random() - .5) * .6;
+      e.vy = .8 + Math.random() * 1.6;
+      e.maxLife = (H + 20) / e.vy;
+      e.life = (e.y + 5) / e.vy;
     }
     return e;
   }
 
+  const EMBER_COUNT = { gate: 36, count: 28, rain: 70 };
+
   function initEmbers() {
-    const base = emberMode === 'gate' ? 36 : 28;
+    const base = EMBER_COUNT[emberMode];
     const count = W < 600 ? Math.round(base / 2) : base;
     embers = Array.from({ length: count }, () => spawn(true));
   }
@@ -808,7 +939,7 @@
       e.x += e.vx + Math.sin(e.wobble) * .25;
       e.y += e.vy;
       const fade = Math.sin(Math.min(e.life / e.maxLife, 1) * Math.PI);
-      if (e.life > e.maxLife || e.y < -10) { embers[i] = spawn(false); continue; }
+      if (e.life > e.maxLife || e.y < -10 || e.y > H + 10) { embers[i] = spawn(false); continue; }
 
       ctx.fillStyle = `rgba(255, 75, 20, ${.08 * fade})`;
       ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 4, 0, Math.PI * 2); ctx.fill();
