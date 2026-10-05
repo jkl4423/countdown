@@ -660,9 +660,9 @@
 
 <script>
   // Mi, 14.10.2026 19:00 Schweizer Zeit (Sommerzeit MESZ, UTC+2)
-  // Vorschau des Endzustands: Seite mit ?vorschau aufrufen -> Countdown läuft 10 s nach dem Laden ab
+  // Vorschau des Endzustands: Seite mit ?vorschau aufrufen -> Countdown läuft 30 s nach dem Laden ab
   const PREVIEW = new URLSearchParams(location.search).has('vorschau');
-  const TARGET = PREVIEW ? Date.now() + 10000 : new Date('2026-10-14T19:00:00+02:00').getTime();
+  const TARGET = PREVIEW ? Date.now() + 30000 :new Date('2026-10-14T19:00:00+02:00').getTime();
 
   const INTRO_VOLUME = 0.5;
   const LAUGH_VOLUME = 0.9;
