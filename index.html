@@ -1096,11 +1096,16 @@
 
   // iOS: jedes Audio-Element muss einmal innerhalb einer Berührung gestartet werden,
   // sonst darf es später (Loop-Überblendung, Lach-Schleife) nicht mehr spielen
+  // play() und sofort pause(): der Aufruf in der Berührung genügt zum Freischalten,
+  // abgespielt wird nichts (stumm schalten allein greift auf manchen Handys nicht)
   function unlock(a) {
     a.muted = true;
-    return a.play()
-      .then(() => { a.pause(); a.currentTime = 0; a.muted = muted; })
-      .catch((err) => { a.muted = muted; throw err; });
+    const p = a.play();
+    a.pause();
+    a.currentTime = 0;
+    return Promise.resolve(p)
+      .catch((err) => { if (err && err.name === 'NotAllowedError') throw err; }) // AbortError durch pause() ist gewollt
+      .finally(() => { a.muted = muted; });
   }
 
   let unlocked = false;
