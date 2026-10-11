@@ -289,7 +289,122 @@
     inset: 0;
     transform-origin: 50% 40%;
     animation: breathe 14s ease-in-out infinite;
+    transition: opacity 4s ease;
   }
+
+  /* ---------- Szenen-Rotation: Schädel weicht, ein Dämon erscheint ---------- */
+
+  #count.skull-off .figure { opacity: 0; }
+
+  /* nur die Mitte des Bildes: die Ränder (unten rechts das Spiel-Logo)
+     liegen ausserhalb des 9:16-Ausschnitts und werden zusätzlich weich ausgeblendet.
+     Alle Angaben in % des Hochformats -> auf Handy und Desktop derselbe Ausschnitt */
+  .appar {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 3s ease;
+    -webkit-mask-image: radial-gradient(ellipse 52% 48% at 50% 38%, #000 50%, transparent 100%);
+    mask-image: radial-gradient(ellipse 52% 48% at 50% 38%, #000 50%, transparent 100%);
+  }
+  .appar.on { opacity: 1; }
+
+  /* Ursprung auf dem Kopf: Zoomen, Wanken und Zittern kreisen um ihn */
+  .appar-head {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 35%;
+    scale: 1.05;
+  }
+
+  .appar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(.7) contrast(1.15);
+    user-select: none;
+  }
+
+  .appar.jolt .eye { animation: eyes-awake .45s; }
+
+  /* Mephisto: langsames Heranzoomen, Wanken, Zittern, ruckartiges Zucken */
+  #mep .eye { top: 32%; width: 6%; height: 3%; }
+  #mep .eye.l { left: 38%; }
+  #mep .eye.r { left: 56.6%; }
+  #mep.run .appar-head {
+    animation:
+      mep-push 18s cubic-bezier(.25, 0, .35, 1) forwards,
+      mep-sway 7s ease-in-out infinite,
+      mep-tremble .4s linear infinite;
+  }
+  #mep.run img { animation: mep-flicker 6s infinite; }
+  #mep.run.jolt img { animation: mep-jolt .45s linear; }
+
+  /* Baal: steigt aus der Tiefe auf, pulsiert, neigt den Kopf;
+     ein Geisterbild flackert neben ihm, beim Zucken springt das Bild wie gestört */
+  #baal .appar-head { transform-origin: 50% 37%; }
+  #baal .eye { top: 33.5%; width: 6%; height: 3%; }
+  #baal .eye.l { left: 38.8%; }
+  #baal .eye.r { left: 56.1%; }
+  #baal .echo {
+    scale: 1.06;
+    translate: 1.5% -1%;
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+  #baal.run .appar-head {
+    animation:
+      baal-rise 16s cubic-bezier(.2, 0, .3, 1) forwards,
+      baal-throb 2.8s ease-in-out infinite,
+      baal-tilt 9s ease-in-out infinite;
+  }
+  #baal.run img:not(.echo) { animation: baal-flicker 5s infinite; }
+  #baal.run .echo { animation: baal-echo 4.5s ease-in-out infinite; }
+  #baal.run.jolt img:not(.echo) { animation: baal-glitch .5s steps(1); }
+  #baal.run.jolt .echo { animation: baal-echo-flash .5s steps(1); }
+
+  /* Diablo: schwerer Zoom, ständiges Grollen, Herzschlag im Rot,
+     das Juwel auf der Stirn glüht mit, beim Zucken bebt alles */
+  #dia .appar-head { transform-origin: 50% 32%; }
+  #dia .eye { top: 29.5%; width: 7%; height: 3%; }
+  #dia .eye.l { left: 35%; }
+  #dia .eye.r { left: 58.8%; }
+  #dia .gem {
+    position: absolute;
+    left: 45.8%;
+    top: 19.7%;
+    width: 10%;
+    height: 6%;
+    background: radial-gradient(ellipse, rgba(255, 170, 60, .8), rgba(230, 70, 10, .3) 40%, transparent 70%);
+    mix-blend-mode: screen;
+    opacity: .4;
+    pointer-events: none;
+  }
+  #dia.run .appar-head {
+    animation:
+      dia-push 20s cubic-bezier(.3, 0, .3, 1) forwards,
+      dia-rumble .22s linear infinite;
+  }
+  #dia.run img { animation: dia-heartbeat 1.6s ease-out infinite; }
+  #dia.run .gem { animation: dia-gem 1.6s ease-out infinite; }
+  #dia.run.jolt img { animation: dia-quake .6s linear; }
+  #dia.run.jolt .gem { animation: none; opacity: 1; }
+
+  /* nach Ablauf: die Rotation hat nichts mehr zu sagen – das Finale wechselt
+     zufällig zwischen Schädel (.final-off blendet ihn aus) und den Dämonen (.final) */
+  body.awake #count .figure { opacity: 1; }
+  body.awake #count.final-off .figure { opacity: 0; }
+  body.awake #count .appar { opacity: 0; }
+  body.awake #count .appar.final { opacity: 1; }
+
+  /* dieselbe Raserei wie beim Schädel: Beben, flackerndes Bild, zuckende Augen */
+  body.awake #count .appar.final .appar-head { scale: 1.15; rotate: none; translate: none; animation: quake .32s linear infinite; }
+  body.awake #count .appar.final img { animation: imgflicker 1.7s infinite; }
+  body.awake #count .appar.final .echo { animation: none; opacity: 0; }
+  body.awake #count .appar.final .gem { animation: shimmer 1.2s infinite; filter: brightness(1.8); }
 
   .figure img {
     position: absolute;
@@ -406,20 +521,46 @@
 
   /* ---------- Countdown abgelaufen ---------- */
 
-  .awakened {
+  /* auf dunklem Grund: "Es ist an der Zeit …", dann "… Sanktuario wartet auf Euch!";
+     der letzte Satz rutscht danach nach unten und bleibt gedämpft stehen */
+  .finale-words {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
     display: none;
-    font-family: 'Cinzel Decorative', serif;
-    font-size: clamp(1.6rem, 6vw, 3.4rem);
-    line-height: 1.2;
-    letter-spacing: .03em;
-    text-wrap: balance;
-    color: #8a2618;
-    text-shadow: 0 0 .3em rgba(170, 20, 8, .7), 0 2px 0 #000;
-    animation: awakeflicker 2.2s infinite;
+    pointer-events: none;
   }
-
   body.awake .countdown { display: none; }
-  body.awake .awakened { display: block; }
+  body.awake .finale-words { display: block; }
+
+  .finale-words p {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 50%;
+    translate: 0 -50%;
+    text-align: center;
+    text-wrap: balance;
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.5rem, 5.5vw, 3.2rem);
+    line-height: 1.25;
+    letter-spacing: .03em;
+    color: #8a2618;
+    text-shadow: 0 0 .3em rgba(170, 20, 8, .6), 0 2px 0 #000;
+    opacity: 0;
+    filter: blur(8px);
+    transition: opacity 2.2s ease, filter 2.2s ease,
+                top 3s ease-in-out, font-size 3s ease-in-out, color 3s ease, text-shadow 3s ease;
+  }
+  .finale-words p.in { opacity: 1; filter: blur(0); }
+
+  .finale-words p.settle {
+    top: calc(100% - clamp(32px, 8vh, 72px));
+    font-size: clamp(1rem, 2.8vw, 1.6rem);
+    color: rgba(150, 40, 25, .8);
+    text-shadow: 0 0 .25em rgba(110, 8, 4, .35), 0 2px 0 #000;
+  }
+  .finale-words p.in.settle { opacity: .7; animation: settle-breathe 8s ease-in-out 3s infinite; }
 
   /* Kopf vibriert, Bild und Augen flackern heftig */
   body.awake .figure { animation: quake .32s linear infinite; }
@@ -522,9 +663,11 @@
     pointer-events: none;
   }
 
+  /* bricht nur zwischen Wörtern um, falls ein Text breiter als das Handy ist */
   .ghost {
     position: absolute;
-    white-space: nowrap;
+    max-width: calc(100% - 32px);
+    text-align: center;
     letter-spacing: .04em;
     opacity: 0;
     filter: blur(8px);
@@ -548,12 +691,19 @@
     text-shadow: 0 0 .5em rgba(0, 0, 0, .9);
     transition-duration: 2.5s;
   }
+  /* die Frage an die beiden: etwas deutlicher als das Flüstern */
+  .ghost.whisper.ask {
+    font-size: clamp(1.4rem, 4.6vw, 2.8rem);
+    color: rgba(215, 190, 165, .6);
+  }
   .ghost.whisper.out {
     opacity: 0;
     filter: blur(10px);
     transform: translateY(-24px);
     transition: opacity 2.6s ease, filter 2.6s ease, transform 2.6s ease;
   }
+
+  .ghost .w { display: inline-block; white-space: nowrap; }
 
   .ghost .ch {
     display: inline-block;
@@ -571,6 +721,127 @@
     40%      { transform: translate(2px, -2px) rotate(.25deg); }
     60%      { transform: translate(-2px, -1px) rotate(-.2deg); }
     80%      { transform: translate(3px, 2px) rotate(.3deg); }
+  }
+
+  @keyframes mep-push { from { scale: 1.05; } to { scale: 1.4; } }
+
+  @keyframes mep-sway {
+    0%, 100% { rotate: 0deg; }
+    30%      { rotate: -1.4deg; }
+    55%      { rotate: .6deg; }
+    80%      { rotate: 1.2deg; }
+  }
+
+  @keyframes mep-tremble {
+    0%, 100% { translate: 0 0; }
+    25%      { translate: -1.5px .8px; }
+    50%      { translate: 1px -1.2px; }
+    75%      { translate: -.8px -.6px; }
+  }
+
+  @keyframes mep-flicker {
+    0%, 100% { filter: brightness(.7) contrast(1.15); }
+    20%      { filter: brightness(.55) contrast(1.15); }
+    22%      { filter: brightness(.8) contrast(1.2); }
+    24%      { filter: brightness(.45) contrast(1.15); }
+    26%      { filter: brightness(.72) contrast(1.15); }
+    60%      { filter: brightness(.62) contrast(1.15); }
+    63%      { filter: brightness(.35) contrast(1.15); }
+    65%      { filter: brightness(.75) contrast(1.15); }
+  }
+
+  @keyframes mep-jolt {
+    0%, 100% { translate: 0 0; filter: brightness(.7) contrast(1.15); }
+    15%      { translate: -7px 3px; filter: brightness(1.05) contrast(1.35) saturate(1.3); }
+    30%      { translate: 6px -4px; filter: brightness(.4) contrast(1.2); }
+    45%      { translate: -4px -2px; filter: brightness(.95) contrast(1.3) saturate(1.2); }
+    60%      { translate: 5px 3px; filter: brightness(.5) contrast(1.2); }
+    80%      { translate: -2px 1px; filter: brightness(.8) contrast(1.2); }
+  }
+
+  @keyframes baal-rise { from { translate: 0 7%; } to { translate: 0 0; } }
+  @keyframes baal-throb { 0%, 100% { scale: 1.16; } 45% { scale: 1.25; } 55% { scale: 1.23; } }
+
+  @keyframes baal-tilt {
+    0%, 100% { rotate: 0deg; }
+    35%      { rotate: 2.2deg; }
+    50%      { rotate: 1.6deg; }
+    75%      { rotate: -1.8deg; }
+  }
+
+  @keyframes baal-flicker {
+    0%, 100% { filter: brightness(.7) contrast(1.15); }
+    30%      { filter: brightness(.6) contrast(1.15) hue-rotate(-12deg); }
+    32%      { filter: brightness(.85) contrast(1.25) hue-rotate(-20deg) saturate(1.2); }
+    34%      { filter: brightness(.5) contrast(1.15); }
+    70%      { filter: brightness(.75) contrast(1.2); }
+    72%      { filter: brightness(.4) contrast(1.15); }
+    74%      { filter: brightness(.7) contrast(1.15); }
+  }
+
+  @keyframes baal-echo {
+    0%, 100% { opacity: 0; filter: blur(3px) brightness(.6); }
+    40%      { opacity: .3; filter: blur(1px) brightness(.8); }
+    55%      { opacity: .08; }
+    60%      { opacity: .35; filter: blur(2px) brightness(.9); }
+  }
+
+  @keyframes baal-glitch {
+    0%   { translate: -9px 0; transform: skewX(4deg); filter: brightness(1) contrast(1.4) hue-rotate(-25deg); }
+    20%  { translate: 7px 2px; transform: skewX(-6deg); filter: brightness(.35) contrast(1.2); }
+    40%  { translate: -3px -2px; transform: skewX(2deg); filter: brightness(.95) contrast(1.35) saturate(1.4); }
+    60%  { translate: 10px 0; transform: skewX(-3deg); filter: brightness(.5) contrast(1.2); }
+    80%  { translate: -2px 1px; transform: none; filter: brightness(.8) contrast(1.2); }
+    100% { translate: 0 0; transform: none; filter: brightness(.7) contrast(1.15); }
+  }
+
+  @keyframes baal-echo-flash {
+    0%   { opacity: .6; filter: blur(0) brightness(1.1); }
+    40%  { opacity: 0; }
+    60%  { opacity: .5; filter: blur(1px) brightness(.9); }
+    100% { opacity: 0; }
+  }
+
+  @keyframes dia-push { from { scale: 1.1; } to { scale: 1.45; } }
+
+  @keyframes dia-rumble {
+    0%, 100% { translate: 0 0; }
+    25%      { translate: .6px 1.4px; }
+    50%      { translate: -.8px -.6px; }
+    75%      { translate: .4px -1.2px; }
+  }
+
+  /* doppelter Schlag: bumm-bumm … Pause */
+  @keyframes dia-heartbeat {
+    0%, 100% { filter: brightness(.65) contrast(1.15); }
+    8%       { filter: brightness(.9) contrast(1.25) saturate(1.3); }
+    18%      { filter: brightness(.7) contrast(1.15); }
+    26%      { filter: brightness(.85) contrast(1.22) saturate(1.2); }
+    45%      { filter: brightness(.65) contrast(1.15); }
+  }
+  @keyframes dia-gem {
+    0%, 45%, 100% { opacity: .35; }
+    8%            { opacity: 1; }
+    18%           { opacity: .5; }
+    26%           { opacity: .9; }
+  }
+
+  @keyframes dia-quake {
+    0%, 100% { translate: 0 0; filter: brightness(.65) contrast(1.15); }
+    10%      { translate: -10px 6px; filter: brightness(1.25) contrast(1.4) saturate(1.5); }
+    25%      { translate: 9px -7px; filter: brightness(.45) contrast(1.2); }
+    40%      { translate: -7px -4px; filter: brightness(1.1) contrast(1.3) saturate(1.3); }
+    55%      { translate: 6px 5px; filter: brightness(.55) contrast(1.2); }
+    70%      { translate: -4px 2px; filter: brightness(.9) contrast(1.2); }
+    85%      { translate: 2px -1px; filter: brightness(.7) contrast(1.15); }
+  }
+
+  /* bei "Bewegung reduzieren": Zucken nur als Aufglühen */
+  @keyframes jolt-light {
+    0%, 100% { filter: brightness(.7) contrast(1.15); }
+    20%      { filter: brightness(1) contrast(1.35) saturate(1.3); }
+    45%      { filter: brightness(.45) contrast(1.2); }
+    65%      { filter: brightness(.9) contrast(1.3); }
   }
 
   @keyframes imgflicker {
@@ -596,19 +867,7 @@
     80%      { opacity: 1; }
   }
 
-  @keyframes awakeflicker {
-    0%, 100% { opacity: 1; }
-    5%       { opacity: .2; }
-    7%       { opacity: 1; }
-    30%      { opacity: .9; }
-    32%      { opacity: .1; }
-    33%      { opacity: .9; }
-    34%      { opacity: .3; }
-    36%      { opacity: 1; }
-    70%      { opacity: .85; }
-    72%      { opacity: .15; }
-    74%      { opacity: 1; }
-  }
+  @keyframes settle-breathe { 0%, 100% { opacity: .7; } 50% { opacity: .4; } }
 
   /* gleiche Schritte wie @keyframes eyes */
   @keyframes smoulder {
@@ -634,6 +893,9 @@
     .label { margin-top: .3rem; font-size: .55rem; letter-spacing: .2em; }
     main { padding-bottom: 14px; }
     .hint { bottom: 10px; }
+    /* Schrift der Szenen kleiner, damit die übereinander gestaffelten Texte sich nicht berühren */
+    .ghost.name { font-size: clamp(1.1rem, 7vh, 1.8rem); }
+    .ghost.whisper, .ghost.whisper.ask { font-size: clamp(1rem, 6vh, 1.6rem); }
   }
 
   /* "Bewegung reduzieren" (iOS/macOS/Android): nur Zoomen und Skalieren weglassen –
@@ -648,6 +910,9 @@
     body.opening .burst i:nth-child(3) { transform: translate(-50%, -50%) scale(1); transition: none; }
     .unit.tick .num { transform: none; }
     .ghost .ch.fall, .ghost.whisper.out { transform: none; }
+    #count .appar.run .appar-head,
+    body.awake #count .appar.final .appar-head { animation: none; }
+    #count .appar.run.jolt img:not(.echo) { animation: jolt-light .5s linear; }
   }
 </style>
 </head>
@@ -662,6 +927,29 @@
       <div class="eye l"></div>
       <div class="eye r"></div>
     </div>
+    <div class="appar" id="mep">
+      <div class="appar-head">
+        <img src="data/mep.png" alt="" draggable="false">
+        <div class="eye l"></div>
+        <div class="eye r"></div>
+      </div>
+    </div>
+    <div class="appar" id="dia">
+      <div class="appar-head">
+        <img src="data/dia.jpg" alt="" draggable="false">
+        <div class="gem"></div>
+        <div class="eye l"></div>
+        <div class="eye r"></div>
+      </div>
+    </div>
+    <div class="appar" id="baal">
+      <div class="appar-head">
+        <img src="data/baal.png" alt="" draggable="false">
+        <img class="echo" src="data/baal.png" alt="" draggable="false">
+        <div class="eye l"></div>
+        <div class="eye r"></div>
+      </div>
+    </div>
     <div class="edges"></div>
   </div>
 
@@ -670,6 +958,11 @@
   <div class="layer count-vignette"></div>
   <div class="ghosts" id="ghosts" aria-hidden="true"></div>
 
+  <div class="finale-words" aria-live="polite">
+    <p class="ft1">Es ist an der Zeit …</p>
+    <p class="ft2">… Sanktuario wartet auf Euch!</p>
+  </div>
+
   <main>
     <div class="countdown" role="timer" aria-live="off">
       <div class="unit"><span class="num" id="d">--</span><span class="label">Tage</span></div>
@@ -677,7 +970,6 @@
       <div class="unit"><span class="num" id="m">--</span><span class="label">Minuten</span></div>
       <div class="unit"><span class="num" id="s">--</span><span class="label">Sekunden</span></div>
     </div>
-    <p class="awakened">Diablo wandelt auf Erden!</p>
   </main>
 </section>
 
@@ -715,13 +1007,28 @@
 
 <script>
   // Mi, 14.10.2026 19:00 Schweizer Zeit (Sommerzeit MESZ, UTC+2)
-  // Vorschau des Endzustands: Seite mit ?vorschau aufrufen -> Countdown läuft 30 s nach dem Laden ab
-  const PREVIEW = new URLSearchParams(location.search).has('vorschau');
-  const TARGET = PREVIEW ? Date.now() + 30000 :new Date('2026-10-14T19:00:00+02:00').getTime();
+  // Vorschau:
+  //   ?preview1 -> 70 h vor Ablauf: nur Mephisto
+  //   ?preview2 -> 30 h vor Ablauf: Dia, Mephisto
+  //   ?preview3 -> 20 h vor Ablauf: Baal, Dia, Mephisto
+  //   ?preview4 -> Ablauf 1 min nach dem Öffnen des Tors: eine Szene, danach das Finale
+  const params = new URLSearchParams(location.search);
+  const PREVIEW_HOURS = { preview1: 70, preview2: 30, preview3: 20 };
+  const previewHours = Object.keys(PREVIEW_HOURS).find(k => params.has(k));
+  const PREVIEW_END = params.has('preview4');
+  const PREVIEW_END_SECONDS = 60;
+  let TARGET = previewHours ? Date.now() + PREVIEW_HOURS[previewHours] * 3600000
+    : PREVIEW_END ? Date.now() + PREVIEW_END_SECONDS * 1000
+    : new Date('2026-10-14T19:00:00+02:00').getTime();
 
   const INTRO_VOLUME = 0.5;
+  const VOICE_VOLUME = 1;
+  const VOICE_FADE_IN = 0.4;   // Sekunden
+  const VOICE_FADE_OUT = 1.5;  // Sekunden am Ende der Stimme
+  const MUSIC_DUCK = 0.25;     // Musiklautstärke, solange die Stimme spricht
   const LAUGH_VOLUME = 0.9;
-  const LAUGH_INTERVAL = 6;    // Sekunden zwischen den Lachern nach Ablauf (laugh.mp3 ist ~9 s lang -> überlappt)
+  const FINALE_MIN = 7000;     // so lange bleibt ein Bild im Finale mindestens stehen
+  const FINALE_HOLD = 1500;    // nach dem Verklingen des Tons noch so lange, dann Überblenden
   const INTRO_FADE_IN = 4;     // Sekunden beim allerersten Start
   const LOOP_CROSSFADE = 15;   // Sekunden: Ende ausblenden, Anfang einblenden
 
@@ -731,9 +1038,14 @@
 
   // zwei Instanzen des Intros, damit Ende und Anfang überblendet werden können
   const intro = [new Audio('data/intro.mp3'), new Audio('data/intro.mp3')];
-  // zwei Instanzen des Lachens, damit sie sich nach Ablauf überlappen können
+  // zwei Instanzen des Lachens (Tor-Klick und Finale)
   const laughs = [new Audio('data/laugh.mp3'), new Audio('data/laugh.mp3')];
-  const allAudio = [...intro, ...laughs];
+  // Stimmen zu den Dämonen-Szenen
+  const mepVoice = new Audio('data/mep_audio.mp3');
+  const diaVoice = new Audio('data/dia_audio.mp3');
+  const baalVoice = new Audio('data/baal_laugh.mp3');
+  const voices = [mepVoice, diaVoice, baalVoice];
+  const allAudio = [...intro, ...laughs, ...voices];
   allAudio.forEach(a => { a.preload = 'auto'; });
 
   let current = 0;
@@ -798,6 +1110,45 @@
     unlock(intro[1 - current]).catch(() => { unlocked = false; });
   }
 
+  // Musik leiser stellen, solange eine Stimme spricht (nicht mitten in der Loop-Überblendung)
+  function duckMusic(on) {
+    if (!introStarted || crossfading) return;
+    fade(intro[current], on ? MUSIC_DUCK : INTRO_VOLUME, on ? 1 : 2.5);
+  }
+
+  // Stimme kurz ein- und am Ende wieder ausblenden, damit sie sich in die Musik legt.
+  // Kehrt zurück, wenn sie verklungen ist (oder nicht abgespielt werden durfte).
+  function playVoice(a) {
+    return new Promise(resolve => {
+      let tail;
+      // 'pause' auch, falls sie vorzeitig angehalten wird (Finale)
+      const done = () => {
+        clearInterval(tail);
+        a.removeEventListener('ended', done);
+        a.removeEventListener('pause', done);
+        duckMusic(false);
+        resolve();
+      };
+      a.currentTime = 0;
+      a.volume = 0;
+      a.play()
+        .then(() => {
+          fade(a, VOICE_VOLUME, VOICE_FADE_IN);
+          duckMusic(true);
+          a.addEventListener('ended', done);
+          a.addEventListener('pause', done);
+          tail = setInterval(() => {
+            // bei kurzen Tönen (Baals Lachen) nur das letzte Viertel ausblenden
+            const len = Math.min(VOICE_FADE_OUT, a.duration / 4);
+            if (!a.duration || a.currentTime < a.duration - len) return;
+            clearInterval(tail);
+            fade(a, 0, len);
+          }, 100);
+        })
+        .catch(() => resolve());
+    });
+  }
+
   // Browser erlauben Ton meist erst nach einer Interaktion
   startIntro();
   ['pointerdown', 'keydown', 'touchend'].forEach(type =>
@@ -828,16 +1179,20 @@
   door.addEventListener('click', () => {
     if (opened) return;
     opened = true;
+    // ?preview4: erst ab jetzt zählen, egal wie lange das Tor vorher zu war
+    if (PREVIEW_END) { TARGET = Date.now() + PREVIEW_END_SECONDS * 1000; update(); }
 
     startIntro();
     playLaugh();
     unlock(laughs[laughIndex]).catch(() => {}); // die andere Instanz für die spätere Schleife
+    voices.forEach(v => unlock(v).catch(() => {}));
 
     document.body.classList.add('opening');
     count.removeAttribute('aria-hidden');
 
     setTimeout(() => {
-      haunt();
+      // haunt();   // Namen + "ich sehe euch" / "ich warte auf euch" – vorerst ersetzt durch rotate()
+      rotate();
       if (awake) { startAwake(); return; }
       emberMode = 'count'; resize(); initEmbers();
     }, 2600);
@@ -845,7 +1200,7 @@
   });
 
   /* =========================================================
-     Countdown abgelaufen: Funkenregen + Lachen in Schleife
+     Countdown abgelaufen: Funkenregen + zufällig wechselnde Dämonen mit ihrem Ton
      ========================================================= */
 
   let awake = false;
@@ -869,9 +1224,52 @@
     emberMode = 'rain';
     resize();
     initEmbers();
-    // läuft noch das Lachen vom Tor-Klick, nicht sofort ein zweites starten
-    if (laughs.every(a => a.paused)) playLaugh();
-    setInterval(playLaugh, LAUGH_INTERVAL * 1000);
+    // spricht ein Dämon noch, ihn ausblenden
+    voices.forEach(v => { if (!v.paused) fade(v, 0, 1.5, () => v.pause()); });
+    duckMusic(false);
+    finale();
+  }
+
+  // Finale: zufällig zwischen Schädel und Dämonen wechseln, jeder mit seinem Ton;
+  // erst wenn der Ton verklungen ist, ins nächste Bild überblenden
+  async function finale() {
+    const items = [
+      { el: null, voice: laughs[0] },   // der Schädel lacht
+      ...SCENES.map(s => ({ el: s.el, voice: s.voice })),
+    ];
+    const show = (item, on) => {
+      if (item.el) item.el.classList.toggle('final', on);
+      else count.classList.toggle('final-off', !on);
+    };
+
+    // erst alles ins Dunkel, dann die beiden Sätze
+    count.classList.add('final-off');
+    const ft1 = document.querySelector('.finale-words .ft1');
+    const ft2 = document.querySelector('.finale-words .ft2');
+    await sleep(2500);
+    ft1.classList.add('in');
+    await sleep(4500);
+    ft1.classList.remove('in');
+    await sleep(2200);
+    ft2.classList.add('in');
+    await sleep(4500);
+    ft2.classList.add('settle');   // bleibt unten stehen, gedämpft
+    await sleep(1500);
+
+    // dann die Dämonen (und der Schädel) in zufälligem Wechsel
+    let cur = null;
+    while (true) {
+      const others = items.filter(i => i !== cur);
+      const next = others[Math.floor(Math.random() * others.length)];
+      show(next, true);
+      if (cur) show(cur, false);
+      cur = next;
+
+      const shown = Date.now();
+      await sleep(1500);   // das Bild erst ein Stück einblenden lassen
+      await playVoice(cur.voice);
+      await sleep(Math.max(FINALE_HOLD, FINALE_MIN - (Date.now() - shown)));
+    }
   }
 
   /* =========================================================
@@ -958,7 +1356,7 @@
   // Bereiche, die eine Geisterschrift nicht verdecken darf (Bildschirmkoordinaten)
   function ghostObstacles() {
     const list = [...ghosts.querySelectorAll('.ghost')].map(g => g.getBoundingClientRect());
-    const info = document.querySelector(document.body.classList.contains('awake') ? '.awakened' : '.countdown');
+    const info = document.querySelector(document.body.classList.contains('awake') ? '.finale-words .ft2' : '.countdown');
     list.push(info.getBoundingClientRect());
     list.push(document.getElementById('soundToggle').getBoundingClientRect());
     // die Figur: Mitra, Kapuze und Schädel …
@@ -977,15 +1375,23 @@
 
   const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
-  function makeGhost(text, cls) {
+  // slot (optional): feste Stelle { x, y } statt einer freien aus GHOST_SLOTS
+  function makeGhost(text, cls, slot) {
     const el = document.createElement('div');
     el.className = 'ghost ' + cls;
-    for (const c of text) {
-      const span = document.createElement('span');
-      span.className = 'ch';
-      span.textContent = c === ' ' ? ' ' : c;
-      el.appendChild(span);
-    }
+    // Buchstaben einzeln (zum Zerfallen), Wörter zusammengehalten (Umbruch nur dazwischen)
+    text.split(' ').forEach((word, i) => {
+      if (i) el.appendChild(document.createTextNode(' '));
+      const w = document.createElement('span');
+      w.className = 'w';
+      for (const c of word) {
+        const span = document.createElement('span');
+        span.className = 'ch';
+        span.textContent = c;
+        w.appendChild(span);
+      }
+      el.appendChild(w);
+    });
     const obstacles = ghostObstacles(); // vor dem Einfügen, damit el sich nicht selbst im Weg steht
     ghosts.appendChild(el);
 
@@ -995,9 +1401,12 @@
     const w = el.offsetWidth, h = el.offsetHeight;
     const gap = 10;
     let pos = null;
-    for (const slot of shuffle(GHOST_SLOTS)) {
-      const x = Math.min(Math.max(slot.x * g.width - w / 2, 16), g.width - w - 16);
-      const y = Math.min(Math.max(slot.y * g.height - h / 2, 16), g.height - h - 16);
+    const short = matchMedia('(max-height: 520px) and (orientation: landscape)').matches;
+    for (const s of slot ? [slot] : shuffle(GHOST_SLOTS)) {
+      const sy = short && s.yShort != null ? s.yShort : s.y;
+      const x = Math.min(Math.max(s.x * g.width - w / 2, 16), g.width - w - 16);
+      const y = Math.min(Math.max(sy * g.height - h / 2, 16), g.height - h - 16);
+      if (slot) { pos = { x, y }; break; }
       const box = { left: g.left + x - gap, right: g.left + x + w + gap, top: g.top + y - gap, bottom: g.top + y + h + gap };
       if (!obstacles.some(o => overlaps(box, o))) { pos = { x, y }; break; }
     }
@@ -1027,10 +1436,10 @@
 
   // Name blendet ein, dann fallen die Buchstaben in zufälliger Reihenfolge weg.
   // Kehrt zurück, sobald das Zerfallen beginnt (der nächste Name darf schon kommen).
-  async function nameCrumbles(text) {
-    const el = makeGhost(text, 'name');
+  async function nameCrumbles(text, slot) {
+    const el = makeGhost(text, 'name', slot);
     await sleep(1800 + 1400);
-    const chars = shuffle([...el.children]);
+    const chars = shuffle([...el.querySelectorAll('.ch')]);
     chars.forEach((ch, i) => {
       ch.style.setProperty('--dx', rand(-25, 25) + 'px');
       ch.style.setProperty('--dy', rand(50, 140) + 'px');
@@ -1042,12 +1451,153 @@
 
   // Flüstern blendet ein und verweht nach oben.
   // Kehrt zurück, sobald es zu verwehen beginnt (das nächste darf schon kommen).
-  async function whisper(text) {
-    const el = makeGhost(text, 'whisper');
+  async function whisper(text, slot, cls = '') {
+    const el = makeGhost(text, ('whisper ' + cls).trim(), slot);
     await sleep(2500 + 3000);
     el.classList.add('out');
     setTimeout(() => el.remove(), 2700);
   }
+
+  /* =========================================================
+     Szenen-Rotation (ab 72 h vor Ablauf, ohne Schädel):
+     Texte (+ Lachen) -> neuester Dämon -> Texte (+ Lachen) -> nächster Dämon -> …
+     ========================================================= */
+
+  const SCENE_CYCLE = 32000;    // so lange dauert eine Szene (Texte + Dämon) höchstens ungefähr
+  const SCENE_MIN = 9000;       // so lange bleibt ein Dämon mindestens sichtbar (auch bei kurzem Ton)
+
+  // feste Stellen für die Schrift zwischen zwei Dämonen
+  // (yShort: Handy quer, dort ist über dem Countdown nur wenig Höhe frei)
+  const SLOT_NAME_1 = { x: .5, y: .3,  yShort: .14 };
+  const SLOT_NAME_2 = { x: .5, y: .4,  yShort: .3 };
+  const SLOT_ASK    = { x: .5, y: .52, yShort: .5 };
+  const SLOT_ASK_HI = { x: .5, y: .46, yShort: .45 };
+  const SLOT_ASK_LO = { x: .5, y: .56, yShort: .6 };
+
+  const HOUR = 3600000;
+
+  // freigeschaltet, sobald weniger als `hours` Stunden bis zum Ablauf übrig sind;
+  // die neueste Szene (wenigste Stunden) kommt jeweils zuerst, die älteren danach
+  const SCENES = [
+    {
+      el: document.getElementById('baal'), hours: 24, voice: baalVoice,
+      async intro() {
+        await nameCrumbles('Timea', SLOT_NAME_1);
+        await sleep(700);
+        await nameCrumbles('Benjamin', SLOT_NAME_2);
+        await sleep(1200);
+        await whisper('…\u00a0ich habe euch gefunden!', SLOT_ASK_HI, 'ask');
+        await whisper('Heute komme ich zu euch!', SLOT_ASK_LO, 'ask');
+      },
+    },
+    {
+      el: document.getElementById('dia'), hours: 48, voice: diaVoice,
+      async intro() {
+        await nameCrumbles('Benjamin, Timea\u00a0…', SLOT_NAME_1);
+        await sleep(1200);
+        await whisper('…\u00a0es naht das Ende!', SLOT_ASK, 'ask');
+      },
+    },
+    {
+      el: document.getElementById('mep'), hours: 72, voice: mepVoice,
+      async intro() {
+        await nameCrumbles('Timea', SLOT_NAME_1);
+        await sleep(700);
+        await nameCrumbles('Benjamin', SLOT_NAME_2);
+        await sleep(1200);
+        await whisper('Seid ihr wirklich bereit?', SLOT_ASK, 'ask');
+      },
+    },
+  ].sort((a, b) => a.hours - b.hours);
+
+  const activeScenes = () => SCENES.filter(s => TARGET - Date.now() <= s.hours * HOUR);
+
+  // ist schon ein Dämon freigeschaltet, den Schädel gar nicht erst zeigen (liegt noch unter dem Tor)
+  if (activeScenes().length) count.classList.add('skull-off');
+
+  // kurz vor Ablauf keine neue Szene beginnen, damit nichts in den Wechsel zum Finale hineinragt
+  const tooLate = () => TARGET - Date.now() < SCENE_CYCLE + 5000;
+
+  // der Dämon zuckt in zufälligen Abständen
+  function scheduleJolts(el) {
+    let t;
+    const next = () => {
+      t = setTimeout(() => {
+        el.classList.add('jolt');
+        setTimeout(() => el.classList.remove('jolt'), 500);
+        next();
+      }, rand(1500, 4500));
+    };
+    next();
+    return () => { clearTimeout(t); el.classList.remove('jolt'); };
+  }
+
+  // vorher die Texte auf schwarzem Grund, dazu das Lachen
+  async function showScene(scene) {
+    // steht noch der Schädel (Freischaltung bei offener Seite), ihn erst langsam ausblenden
+    if (!count.classList.contains('skull-off')) {
+      count.classList.add('skull-off');
+      await sleep(2000);
+    }
+    // läuft das Lachen vom Tor-Klick noch, kein zweites darüberlegen
+    setTimeout(() => { if (!awake && laughs.every(a => a.paused)) playLaugh(); }, 600);
+    await scene.intro();
+    if (awake) return;
+
+    // der Dämon erscheint, nach einem Moment spricht er
+    const el = scene.el;
+    el.classList.add('on', 'run');
+    scene.stopJolts = scheduleJolts(el);
+    const shown = Date.now();
+    await sleep(rand(1000, 2000));
+    await playVoice(scene.voice);
+    await sleep(Math.max(2500, SCENE_MIN - (Date.now() - shown)));
+  }
+
+  // Dämon ausblenden; kehrt schon während des Ausblendens zurück, damit die Texte nachrücken
+  async function hideScene(scene) {
+    scene.el.classList.remove('on');
+    setTimeout(() => {
+      scene.stopJolts();
+      scene.el.classList.remove('run');
+    }, 3000);
+    await sleep(1500);
+  }
+
+  let rotating = false;
+  async function rotate() {
+    if (rotating) return;
+    rotating = true;
+    // Schriften der Texte vorab laden – sonst wird ein Text mit der Ersatzschrift vermessen und sitzt schief
+    if (document.fonts) document.fonts.load('1em "UnifrakturMaguntia"').catch(() => {});
+    if (document.fonts) document.fonts.load('1em "Jim Nightshade"').catch(() => {});
+
+    let cur = null;   // der gerade sichtbare Dämon
+    await sleep(1500); // den Countdown nach dem Tor erst einblenden lassen
+    // vor 72 h ist noch nichts freigeschaltet: nur der Schädel
+    rounds:
+    while (!awake) {
+      const scenes = activeScenes();
+      if (!scenes.length) { await sleep(5000); continue; }
+      for (const scene of scenes) {
+        // kurz vor Ablauf bleibt der aktuelle Dämon bis zum Finale stehen
+        if (cur && tooLate()) {
+          while (!awake) await sleep(1000);
+          break rounds;
+        }
+        if (cur) await hideScene(cur);
+        if (awake) break rounds;
+        await showScene(scene);
+        cur = scene;
+        if (awake) break rounds;
+      }
+    }
+    if (cur && cur.stopJolts) cur.stopJolts();
+    count.classList.remove('skull-off');
+    SCENES.forEach(s => s.el.classList.remove('on', 'run', 'jolt'));
+  }
+
+  /* ---------- vorerst ersetzt durch rotate(): Namen + "ich sehe euch" / "ich warte auf euch" ----------
 
   // kurz vor Ablauf still sein, damit keine Schrift in den Wechsel zum Finale hineinragt
   const GHOST_CYCLE = 25000;   // so lange dauert ein Durchgang ungefähr
@@ -1081,6 +1631,8 @@
       await sleep(2700 + rand(9000, 17000));
     }
   }
+
+  ---------- */
 
   /* =========================================================
      Glut / Funken
