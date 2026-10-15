@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<title>Das Böse erwacht</title>
+<script>
+  // GitHub Pages liefert für /<repo>/guides/amazone keine Datei, sondern diese Seite.
+  // Weiter zur App mit der Route als ?r=…; index.html stellt die Adresse wieder her.
+  // Projektseiten liegen unter /<repo>/, eigene Domains direkt unter /.
+  const base = location.hostname.endsWith('github.io') ? '/' + location.pathname.split('/')[1] + '/' : '/';
+  const route = location.pathname.slice(base.length);
+  const q = location.search ? '&' + location.search.slice(1) : '';
+  location.replace(base + '?r=' + encodeURIComponent(route) + q + location.hash);
+</script>
+</head>
+<body style="background: #000"></body>
+</html>

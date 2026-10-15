@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<script>
+  // Verzeichnis der App (auf GitHub Pages /<repo>/), festgehalten bevor eine Route die Adresse
+  // ändert: alle relativen Pfade (data/…) beziehen sich darauf, auch unter /guides/amazone
+  const APP_BASE = location.pathname.replace(/[^/]*$/, '');
+  document.head.appendChild(Object.assign(document.createElement('base'), { href: APP_BASE }));
+</script>
 <title>Das Böse erwacht</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -766,6 +772,256 @@
   }
 
   /* =========================================================
+     KLASSENWAHL + TALENTBÄUME (statt Countdown und Finale)
+     ========================================================= */
+
+  /* Countdown und Charakterwahl bleiben im Code, werden aber nicht mehr gezeigt */
+  body.builds #count, body.builds #select { display: none; }
+  /* umgekehrt im alten Ablauf (/old): keine Klassenwahl */
+  body:not(.builds) #classes, body:not(.builds) .build { display: none; }
+
+  .scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  #classes { z-index: 1; opacity: 0; transition: opacity 2.6s ease 2.2s; }
+  body.opening #classes { opacity: 1; }
+  /* direkt auf /guides aufgerufen: ohne Tor, sofort da */
+  body.direct #classes { opacity: 1; transition: none; }
+
+  .classes-inner {
+    position: relative;
+    z-index: 1;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1rem, 4vh, 2.5rem);
+    padding: 72px 16px 32px;
+    text-align: center;
+  }
+
+  .classes-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.5rem, 5vw, 2.8rem);
+    letter-spacing: .04em;
+    color: #e3c98f;
+    text-shadow: 0 0 .3em #000, 0 0 1.2em rgba(176, 143, 79, .35);
+    text-wrap: balance;
+  }
+
+  .class-cards {
+    display: flex;
+    justify-content: center;
+    gap: clamp(.75rem, 4vw, 2.5rem);
+    width: 100%;
+  }
+
+  /* Ausschnitt der Figur aus dem Lagerfeuer-Bild; --fx/--fy = Mitte der Figur in % des Bildes */
+  .class-card {
+    --cw: min(42vw, 260px, 40vh);
+    position: relative;
+    width: var(--cw);
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid rgba(140, 111, 58, .3);
+    background: #000;
+    box-shadow: inset 0 0 25px rgba(90, 0, 0, .35), 0 0 30px rgba(0, 0, 0, .9);
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: border-color .6s ease, box-shadow .6s ease;
+  }
+  @supports (height: 100dvh) {
+    .class-card { --cw: min(42vw, 260px, 40dvh); }
+  }
+  .class-card img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    height: 230%;
+    width: auto;
+    max-width: none;
+    translate: calc(-1 * var(--fx)) calc(-1 * var(--fy));
+    filter: brightness(.7) contrast(1.1) saturate(.9);
+    transition: filter .8s ease, scale 1.2s ease;
+    user-select: none;
+  }
+  .class-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, .7), transparent 22%, transparent 78%, rgba(0, 0, 0, .7)),
+      linear-gradient(180deg, rgba(0, 0, 0, .4), transparent 25%, transparent 62%, rgba(0, 0, 0, .95));
+    pointer-events: none;
+  }
+  .class-card span {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 6%;
+    z-index: 1;
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.05rem, 3.6vw, 1.6rem);
+    letter-spacing: .05em;
+    color: #e3c98f;
+    text-shadow: 0 0 .3em #000, 0 0 .9em rgba(0, 0, 0, .9);
+    transition: text-shadow .8s ease;
+  }
+  .class-card:hover, .class-card:focus-visible {
+    outline: none;
+    border-color: rgba(227, 201, 143, .7);
+    box-shadow: inset 0 0 30px rgba(150, 30, 10, .45), 0 0 30px rgba(176, 143, 79, .25);
+  }
+  .class-card:hover img, .class-card:focus-visible img { filter: brightness(.95) contrast(1.1); scale: 1.04; }
+  .class-card:hover span, .class-card:focus-visible span {
+    text-shadow: 0 0 .3em #000, 0 0 .8em rgba(0, 0, 0, .9), 0 0 1.4em rgba(230, 170, 80, .7);
+  }
+
+  /* ---------- Talentbaum-Seite ---------- */
+
+  .build {
+    z-index: 2;
+    background: #050403;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity .8s ease, visibility 0s .8s;
+  }
+  .build.open { visibility: visible; opacity: 1; transition: opacity .8s ease, visibility 0s; }
+
+  .build-inner {
+    width: min(100%, 560px);
+    margin: 0 auto;
+    padding: 16px 16px 48px;
+  }
+
+  /* Zurück ganz links, Name in der Mitte; die rechte Spalte bleibt frei (dort sitzt am Handy der Ton-Knopf) */
+  .build-head {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    margin-bottom: 16px;
+  }
+  .back {
+    justify-self: start;
+    height: 44px;
+    white-space: nowrap;
+    padding: 0 14px;
+    border: 1px solid rgba(140, 111, 58, .3);
+    background: rgba(0, 0, 0, .6);
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: .85rem;
+    letter-spacing: .08em;
+    cursor: pointer;
+    transition: border-color .3s, color .3s;
+  }
+  .back:hover, .back:focus-visible { outline: none; border-color: rgba(227, 201, 143, .7); color: #e3c98f; }
+  .build-head h2 {
+    font-family: 'Cinzel Decorative', serif;
+    font-weight: 700;
+    font-size: clamp(1.3rem, 5vw, 2rem);
+    letter-spacing: .04em;
+    text-align: center;
+    color: #e3c98f;
+    text-shadow: 0 0 .3em #000, 0 0 1.2em rgba(176, 143, 79, .3);
+  }
+  /* Handy hochkant: Zurück nur als Pfeil, damit der Name mittig Platz hat */
+  @media (max-width: 430px) {
+    .back { width: 44px; padding: 0 0 4px; font-size: 1.9rem; line-height: 1; }
+    .back span { display: none; }
+  }
+
+  /* beim Scrollen der Talentbaum-Seite weicht der Ton-Knopf, sonst liegt er über den Reitern */
+  .sound-toggle.tucked { opacity: 0; pointer-events: none; }
+
+  /* eigene Reiter statt der Reiter im Bild (die werden weggeschnitten) */
+  .tree-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .tree-tab {
+    min-height: 52px;
+    padding: 8px 6px;
+    border: 1px solid rgba(140, 111, 58, .3);
+    background: linear-gradient(180deg, #1c1814, #0b0907);
+    color: var(--gold-dim);
+    font-family: 'Cinzel', serif;
+    font-size: clamp(.7rem, 2.7vw, .9rem);
+    line-height: 1.25;
+    letter-spacing: .06em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: color .3s, border-color .3s, box-shadow .3s;
+  }
+  .tree-tab:hover, .tree-tab:focus-visible { outline: none; color: #d8c7a4; border-color: rgba(227, 201, 143, .5); }
+  .tree-tab[aria-selected="true"] {
+    color: #e3c98f;
+    border-color: rgba(227, 201, 143, .7);
+    box-shadow: inset 0 0 18px rgba(230, 170, 80, .18), 0 0 14px rgba(176, 143, 79, .2);
+    cursor: default;
+  }
+
+  /* fester Ausschnitt; jedes Bild wird per Script so verschoben, dass die Talent-Raster
+     aller drei exakt übereinanderliegen (siehe TREE_CROP) */
+  .tree-view {
+    position: relative;
+    overflow: hidden;
+    background: #1a1917;
+    border: 1px solid rgba(140, 111, 58, .25);
+  }
+  .tree-view img {
+    position: absolute;
+    max-width: none;
+    height: auto;
+    opacity: 0;
+    transition: opacity .35s ease;
+    user-select: none;
+  }
+  .tree-view img.on { opacity: 1; }
+
+  .attrs {
+    margin-top: 24px;
+    padding: 16px 18px 18px;
+    background: rgba(0, 0, 0, .6);
+    border: 1px solid rgba(140, 111, 58, .25);
+    box-shadow: inset 0 0 25px rgba(90, 0, 0, .3);
+  }
+  .attrs h3 {
+    margin-bottom: 10px;
+    font-weight: 400;
+    font-size: .8rem;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+  }
+  .attrs dl > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(140, 111, 58, .15);
+  }
+  .attrs dt { color: #d8c7a4; }
+  .attrs dd { color: #e3c98f; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+
+  body.in-build #embers { opacity: .35; }
+
+  /* =========================================================
      Gemeinsam
      ========================================================= */
 
@@ -1229,6 +1485,30 @@
   </div>
 </section>
 
+<!-- ======== Klassenwahl (nach dem Tor) ======== -->
+<!-- --fx/--fy: Mitte der Figur im Lagerfeuer-Bild -->
+<section class="screen scroll" id="classes" aria-hidden="true">
+  <div class="layer fog"></div>
+  <div class="layer fog two"></div>
+  <div class="classes-inner">
+    <h1 class="classes-title">Wählt euren Pfad</h1>
+    <div class="class-cards">
+      <button class="class-card" data-route="guides/amazone" style="--fx: 16.5%; --fy: 52%">
+        <img src="data/selection.jpeg" alt="" draggable="false">
+        <span>Amazone</span>
+      </button>
+      <button class="class-card" data-route="guides/druide" style="--fx: 85.6%; --fy: 50%">
+        <img src="data/selection.jpeg" alt="" draggable="false">
+        <span>Druide</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ======== Talentbäume (Bilder und Reiter per Script, siehe BUILDS) ======== -->
+<section class="screen scroll build" id="build-ama" aria-hidden="true"></section>
+<section class="screen scroll build" id="build-dudu" aria-hidden="true"></section>
+
 <!-- ======== Das Tor ======== -->
 <section class="screen" id="gate">
   <div class="stage">
@@ -1263,20 +1543,40 @@
 
 <script>
   // Mi, 14.10.2026 19:00 Schweizer Zeit (Sommerzeit MESZ, UTC+2)
-  // Vorschau:
-  //   ?preview1 -> 70 h vor Ablauf: nur Mephisto
-  //   ?preview2 -> 30 h vor Ablauf: Dia, Mephisto
-  //   ?preview3 -> 20 h vor Ablauf: Baal, Dia, Mephisto
-  //   ?preview4 -> Ablauf 100 s nach dem Öffnen des Tors: Szenen, 30 s Ruhe, danach das Finale
-  //   ?preview5 -> Ablauf 15 s nach dem Öffnen des Tors: direkt das Finale
-  const params = new URLSearchParams(location.search);
-  const PREVIEW_HOURS = { preview1: 70, preview2: 30, preview3: 20 };
-  const previewHours = Object.keys(PREVIEW_HOURS).find(k => params.has(k));
-  const PREVIEW_END = params.has('preview4') || params.has('preview5');
-  const PREVIEW_END_SECONDS = params.has('preview5') ? 15 : 100;
-  let TARGET = previewHours ? Date.now() + PREVIEW_HOURS[previewHours] * 3600000
-    : PREVIEW_END ? Date.now() + PREVIEW_END_SECONDS * 1000
-    : new Date('2026-10-14T19:00:00+02:00').getTime();
+  const TARGET = new Date('2026-10-14T19:00:00+02:00').getTime();
+
+  /* ---------- Routen ----------
+     start           Tor, danach die Klassenwahl
+     old             Tor, danach der alte Countdown mit Finale
+     guides          Klassenwahl
+     guides/amazone  Talentbäume Amazone
+     guides/druide   Talentbäume Druide
+     GitHub Pages kennt nur echte Dateien: 404.html leitet unbekannte Pfade als ?r=<route> hierher */
+  const ROUTES = ['start', 'old', 'guides', 'guides/amazone', 'guides/druide'];
+
+  function routeUrl(route) {
+    const q = new URLSearchParams(location.search);
+    q.delete('r');
+    const qs = q.toString();
+    return APP_BASE + route + (qs ? '?' + qs : '') + location.hash;
+  }
+
+  function currentRoute() {
+    const r = new URLSearchParams(location.search).get('r');
+    if (r != null) return r.replace(/^\/+|\/+$/g, '');
+    const p = location.pathname.startsWith(APP_BASE) ? location.pathname.slice(APP_BASE.length) : '';
+    return p.replace(/^index\.html$/, '').replace(/\/+$/, '');
+  }
+
+  // unbekannt oder leer -> start; die Adresse zeigt immer die tatsächliche Route
+  let route = currentRoute().toLowerCase();
+  if (!ROUTES.includes(route)) route = 'start';
+  try { history.replaceState(null, '', routeUrl(route)); } catch (e) { /* file:// */ }
+
+  // nach dem Tor: Klassenwahl und Talentbäume statt Countdown und Finale;
+  // /old zeigt weiterhin den alten Ablauf
+  const BUILDS_MODE = route !== 'old';
+  if (BUILDS_MODE) document.body.classList.add('builds');
 
   const INTRO_VOLUME = 0.5;
   const VOICE_VOLUME = 1;
@@ -1443,15 +1743,21 @@
   door.addEventListener('click', () => {
     if (opened) return;
     opened = true;
-    // ?preview4: erst ab jetzt zählen, egal wie lange das Tor vorher zu war
-    if (PREVIEW_END) { TARGET = Date.now() + PREVIEW_END_SECONDS * 1000; update(); }
-
     startIntro();
     playLaugh();
     unlock(laughs[laughIndex]).catch(() => {}); // die andere Instanz für die spätere Schleife
     voices.forEach(v => unlock(v).catch(() => {}));
 
     document.body.classList.add('opening');
+
+    if (BUILDS_MODE) {
+      // ab jetzt ist die Klassenwahl die Seite (Neuladen führt nicht zurück vors Tor)
+      go('guides', true);
+      setTimeout(() => { emberMode = 'count'; resize(); initEmbers(); }, 2600);
+      setTimeout(() => { gate.hidden = true; }, 4500);
+      return;
+    }
+
     count.removeAttribute('aria-hidden');
 
     setTimeout(() => {
@@ -1463,6 +1769,158 @@
     }, 2600);
     setTimeout(() => { gate.hidden = true; }, 4500);
   });
+
+  /* =========================================================
+     Klassenwahl und Talentbäume
+     ========================================================= */
+
+  // dx/dy: wie weit das Talent-Raster im Bild gegenüber a1 verschoben ist (in Pixeln, gemessen);
+  // alle Bilder haben denselben Massstab, nur der Bildschirmausschnitt ist jeweils anders
+  const BUILDS = {
+    ama: {
+      name: 'Amazone',
+      tabs: ['Speer & Wurfspeer', 'Passiv & Magie', 'Bogen & Armbrust'],
+      attrs: ['80–?', 'Rest', '100–150', '0'],
+      panes: [
+        { src: 'data/skill/ama/a1.jpeg', w: 997,  dx: 0,  dy: 0 },
+        { src: 'data/skill/ama/a2.jpeg', w: 954,  dx: -2, dy: 2 },
+        { src: 'data/skill/ama/a3.jpeg', w: 1035, dx: 18, dy: 12 },
+      ],
+    },
+    dudu: {
+      name: 'Druide',
+      tabs: ['Elementar', 'Gestaltwandel', 'Beschwörung'],
+      attrs: ['130–?', '0', '240', '0'],
+      panes: [
+        { src: 'data/skill/dudu/d1.jpeg', w: 1049, dx: 16, dy: 22 },
+        { src: 'data/skill/dudu/d2.jpeg', w: 1069, dx: 32, dy: 18 },
+        { src: 'data/skill/dudu/d3.jpeg', w: 1050, dx: 28, dy: 10 },
+      ],
+    },
+  };
+  // gezeigter Ausschnitt in a1-Pixeln: ohne die Reiter oben, bis und mit "Points Spent" unten;
+  // rechts begrenzt durch a2, das dort am knappsten abgeschnitten ist
+  const TREE_CROP = { x: 25, y: 150, w: 930, h: 1270 };
+  const ATTRIBUTES = ['Stärke', 'Geschicklichkeit', 'Vitalität', 'Energie'];
+
+  const classes = document.getElementById('classes');
+  const pct = (v, of) => (v / of * 100).toFixed(3) + '%';
+
+  function buildPage(id) {
+    const def = BUILDS[id];
+    const page = document.getElementById('build-' + id);
+    const C = TREE_CROP;
+    page.innerHTML = `
+      <div class="build-inner">
+        <header class="build-head">
+          <button class="back" type="button" aria-label="Zurück zur Wahl">‹<span> Zur Wahl</span></button>
+          <h2>${def.name}</h2>
+        </header>
+        <div class="tree-tabs" role="tablist" aria-label="Talentbäume ${def.name}">
+          ${def.tabs.map((t, i) => `
+            <button class="tree-tab" type="button" role="tab" id="${id}-tab${i}" aria-controls="${id}-tree"
+              aria-selected="${!i}" tabindex="${i ? -1 : 0}">${t}</button>`).join('')}
+        </div>
+        <div class="tree-view" id="${id}-tree" role="tabpanel" aria-labelledby="${id}-tab0"
+          style="aspect-ratio: ${C.w} / ${C.h}">
+          ${def.panes.map((p, i) => `
+            <img class="${i ? '' : 'on'}" src="${p.src}" alt="Talentbaum ${def.tabs[i]}" draggable="false"
+              style="width: ${pct(p.w, C.w)}; left: ${pct(-(C.x + p.dx), C.w)}; top: ${pct(-(C.y + p.dy), C.h)}">`).join('')}
+        </div>
+        <section class="attrs" aria-label="Attribute">
+          <h3>Attribute</h3>
+          <dl>
+            ${ATTRIBUTES.map((a, i) => `<div><dt>${a}</dt><dd>${def.attrs ? def.attrs[i] : '–'}</dd></div>`).join('')}
+          </dl>
+        </section>
+      </div>`;
+
+    const tabs = [...page.querySelectorAll('.tree-tab')];
+    const imgs = [...page.querySelectorAll('.tree-view img')];
+    const view = page.querySelector('.tree-view');
+    let cur = 0;
+    function showTab(t, focus) {
+      cur = t;
+      tabs.forEach((tab, i) => {
+        tab.setAttribute('aria-selected', i === t);
+        tab.tabIndex = i === t ? 0 : -1;
+      });
+      imgs.forEach((img, i) => img.classList.toggle('on', i === t));
+      view.setAttribute('aria-labelledby', tabs[t].id);
+      if (focus) tabs[t].focus();
+    }
+    tabs.forEach((tab, i) => tab.addEventListener('click', () => showTab(i)));
+    // Pfeiltasten wie bei Reitern üblich
+    page.querySelector('.tree-tabs').addEventListener('keydown', (e) => {
+      const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!step) return;
+      e.preventDefault();
+      showTab((cur + step + tabs.length) % tabs.length, true);
+    });
+    // kam man über die Klassenwahl, einfach zurück; bei direktem Aufruf zur Klassenwahl wechseln
+    page.querySelector('.back').addEventListener('click', () => {
+      if (history.state && history.state.fromGuides) history.back();
+      else go('guides', true);
+    });
+    page.addEventListener('scroll', () => toggle.classList.toggle('tucked', page.scrollTop > 40), { passive: true });
+    return page;
+  }
+
+  const buildPages = Object.fromEntries(Object.keys(BUILDS).map(id => [id, buildPage(id)]));
+  let openPage = null;
+
+  function showBuild(id) {
+    if (openPage) closeBuild();
+    openPage = buildPages[id];
+    openPage.scrollTop = 0;
+    openPage.classList.add('open');
+    openPage.removeAttribute('aria-hidden');
+    classes.setAttribute('aria-hidden', 'true');
+    document.body.classList.add('in-build');
+  }
+
+  function closeBuild() {
+    if (!openPage) return;
+    openPage.classList.remove('open');
+    openPage.setAttribute('aria-hidden', 'true');
+    classes.removeAttribute('aria-hidden');
+    document.body.classList.remove('in-build');
+    toggle.classList.remove('tucked');
+    openPage = null;
+  }
+
+  const BUILD_ROUTES = { 'guides/amazone': 'ama', 'guides/druide': 'dudu' };
+
+  // Route anzeigen (start/old sind nur beim Laden von Bedeutung: dort steht das Tor)
+  function render(r) {
+    route = r;
+    if (r === 'guides') { classes.removeAttribute('aria-hidden'); closeBuild(); }
+    else if (BUILD_ROUTES[r]) { classes.removeAttribute('aria-hidden'); showBuild(BUILD_ROUTES[r]); }
+  }
+
+  // eigener Verlaufseintrag: die Zurück-Geste am Handy führt zur Wahl statt von der Seite weg
+  function go(r, replace) {
+    try {
+      history[replace ? 'replaceState' : 'pushState']({ fromGuides: !replace && route === 'guides' }, '', routeUrl(r));
+    } catch (e) { /* file:// */ }
+    render(r);
+  }
+
+  classes.querySelectorAll('.class-card').forEach(card => {
+    card.addEventListener('click', () => go(card.dataset.route));
+  });
+  addEventListener('popstate', () => {
+    const r = currentRoute();
+    render(BUILD_ROUTES[r] ? r : 'guides');
+  });
+
+  // direkt auf /guides…: ohne Tor in die Klassenwahl bzw. den Talentbaum
+  if (BUILDS_MODE && (route === 'guides' || BUILD_ROUTES[route])) {
+    opened = true;
+    gate.hidden = true;
+    document.body.classList.add('direct');
+    render(route);
+  }
 
   /* =========================================================
      Countdown abgelaufen:
@@ -1500,7 +1958,7 @@
 
   // erst, wenn das Tor geöffnet ist (vorher wäre Ton ohnehin blockiert)
   function startAwake() {
-    if (awakeStarted) return;
+    if (awakeStarted || BUILDS_MODE) return;
     awakeStarted = true;
     // die Rotation sofort stilllegen: kein Zucken, keine Szene mehr sichtbar
     SCENES.forEach(s => {
@@ -2070,7 +2528,7 @@
   const canvas = document.getElementById('embers');
   const ctx = canvas.getContext('2d');
   let W, H, embers = [];
-  let emberMode = 'gate';
+  let emberMode = document.body.classList.contains('direct') ? 'count' : 'gate';
   let fireLevel = 1;   // Feuerregen: Anteil der aktiven Brocken (steigt im Höhepunkt)
   let fireFade = 1;    // Feuerregen: Helligkeit (erlischt am Ende des Höhepunkts)
   const campSpot = document.querySelector('.campfire-spot');
